@@ -1,0 +1,26 @@
+[project]
+name = "conversational-survey-engine"
+version = "0.1.0"
+description = "Conversational Survey Engine — AI-powered adaptive surveys"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sqlalchemy[asyncio]>=2.0.0",
+    "aiosqlite>=0.20.0",
+    "litellm>=1.50.0",
+    "openai-agents>=0.0.5",
+    "pydantic-settings>=2.6.0",
+    "alembic>=1.14.0",
+    "httpx>=0.28.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.backends._legacy:_Backend"

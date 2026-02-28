@@ -1,0 +1,162 @@
+[
+  {
+    "id": 1,
+    "title": "Initialize Git & Push Scaffold",
+    "agent": "project-structure",
+    "status": "not-started",
+    "blocked_by": [],
+    "description": "Create branch feature/cse-mvp. Scaffold full directory structure (backend/, frontend/, database/, shared/, docs/, tests/). Create placeholder files, .gitignore, pyproject.toml, package.json. Write shared/project_structure.json. Push initial scaffold commit."
+  },
+  {
+    "id": 2,
+    "title": "Database Schema & Migrations",
+    "agent": "database",
+    "status": "not-started",
+    "blocked_by": [1],
+    "description": "Create database/schema.sql with full DDL (surveys, users, sessions, responses tables + indexes). Create backend/alembic.ini and backend/alembic/ with env.py and initial migration (001_initial_schema.py). Create database/seed.sql with dev seed data. Create database/README.md documenting the schema."
+  },
+  {
+    "id": 3,
+    "title": "Backend Core & Config",
+    "agent": "python-coder",
+    "status": "not-started",
+    "blocked_by": [2],
+    "description": "Install dependencies (fastapi, uvicorn, sqlalchemy, aiosqlite, litellm, openai-agents, pydantic-settings, alembic). Create backend/app/core/config.py (Pydantic Settings with GEMINI_API_KEY, DATABASE_URL, CORS_ORIGINS, LOG_LEVEL). Create backend/app/core/database.py (async SQLAlchemy engine + session factory, WAL mode, busy_timeout). Create backend/app/core/dependencies.py (get_db, get_settings). Create backend/app/main.py (FastAPI app factory, CORS middleware, lifespan for DB init). Create backend/app/__init__.py and all __init__.py files. Create .env.example."
+  },
+  {
+    "id": 4,
+    "title": "Backend ORM Models & Schemas",
+    "agent": "python-coder",
+    "status": "not-started",
+    "blocked_by": [3],
+    "description": "Create backend/app/models/ (survey.py, session.py, response.py, user.py) — SQLAlchemy ORM models matching the database schema exactly. Create backend/app/schemas/ (survey.py, session.py, response.py) — Pydantic request/response models matching the API contract in shared/plan.md section 3.4."
+  },
+  {
+    "id": 5,
+    "title": "Backend Repositories",
+    "agent": "python-coder",
+    "status": "not-started",
+    "blocked_by": [4],
+    "description": "Create backend/app/repositories/ (survey_repo.py, session_repo.py, response_repo.py). Each repository provides async CRUD operations using SQLAlchemy sessions. survey_repo: create, get_by_id, list_all, update, soft_delete, get_stats. session_repo: create, get_by_id, update_status, get_by_survey. response_repo: create (atomic write), get_by_session, get_by_survey."
+  },
+  {
+    "id": 6,
+    "title": "Backend Agent Orchestration",
+    "agent": "python-coder",
+    "status": "not-started",
+    "blocked_by": [5],
+    "description": "Create backend/app/agents/prompts.py (system prompts for generator agent). Create backend/app/agents/generator_agent.py — OpenAI Agent SDK agent using LitellmModel(model='gemini/gemini-2.0-flash'). Takes survey context + goal + constraints + conversation history, returns single question. Create backend/app/agents/validator.py — Python service class: embedding similarity check (litellm.embedding with gemini/text-embedding-004), goal alignment scoring, redundancy detection, compound question detection (rule-based), leading question detection (rule-based), max-question enforcement, goal coverage estimation. If validation fails, return rejection reason for retry."
+  },
+  {
+    "id": 7,
+    "title": "Backend Services",
+    "agent": "python-coder",
+    "status": "not-started",
+    "blocked_by": [6],
+    "description": "Create backend/app/services/survey_service.py (CRUD orchestration for surveys). Create backend/app/services/session_service.py (session lifecycle: create session with user, start, complete, exit). Create backend/app/services/question_service.py (core orchestration: invoke generator agent → run validator → retry up to 3x → store Q/A → check stopping conditions → return next question or completion signal). Export OpenAPI spec to shared/api/openapi.json after all routes are wired."
+  },
+  {
+    "id": 8,
+    "title": "Backend API Routes",
+    "agent": "python-coder",
+    "status": "not-started",
+    "blocked_by": [7],
+    "description": "Create backend/app/api/health.py (GET /health). Create backend/app/api/admin.py (all admin survey endpoints per API contract). Create backend/app/api/participant.py (all participant session endpoints per API contract). Create backend/app/api/router.py (aggregate all routers under /api/v1). Wire router into main.py. Ensure all endpoints have proper error handling (404, 409, 422, 500) and return correct Pydantic response models."
+  },
+  {
+    "id": 9,
+    "title": "Frontend Setup & Routing",
+    "agent": "frontend",
+    "status": "not-started",
+    "blocked_by": [8],
+    "description": "Initialize React 18 + TypeScript + Vite project in frontend/. Install tailwindcss, postcss, autoprefixer, react-router-dom. Configure Tailwind (tailwind.config.js, postcss.config.js, index.css). Create frontend/src/types/ (survey.ts, session.ts) mirroring API contract types. Create frontend/src/services/api.ts (fetch-based API client with VITE_API_BASE_URL). Set up React Router in App.tsx with routes: /admin, /admin/surveys/new, /admin/surveys/:id, /survey/:surveyId, /survey/:surveyId/session/:sessionId, /survey/:surveyId/complete. Create Layout.tsx component with navigation."
+  },
+  {
+    "id": 10,
+    "title": "Frontend Admin Pages",
+    "agent": "frontend",
+    "status": "not-started",
+    "blocked_by": [9],
+    "description": "Create AdminDashboard.tsx (list surveys with stats cards, link to create new). Create SurveyCreator.tsx (form to create survey with all fields from CreateSurveyRequest). Create SurveyDetail.tsx (view survey config, session list, response viewer, stats). Create useAdminSurveys.ts hook (fetch surveys, create, update, delete). Create reusable components: SurveyForm.tsx, StatsCard.tsx, LoadingSpinner.tsx."
+  },
+  {
+    "id": 11,
+    "title": "Frontend Participant Pages",
+    "agent": "frontend",
+    "status": "not-started",
+    "blocked_by": [9],
+    "description": "Create ParticipantLanding.tsx (enter survey via ID/link, start session). Create ParticipantSurvey.tsx (chat-style Q&A interface with ChatBubble components, answer input, progress bar, submit flow that calls POST /respond and renders next question or completion). Create SurveyComplete.tsx (thank-you page with session summary). Create useSurveySession.ts hook (manage session state, submit answers, handle completion). Create components: QuestionCard.tsx, ChatBubble.tsx, ProgressBar.tsx."
+  },
+  {
+    "id": 12,
+    "title": "Database Tests",
+    "agent": "database-test",
+    "status": "not-started",
+    "blocked_by": [2, 3],
+    "description": "Create tests for: migration up/down correctness, all table creation with correct columns/types/constraints, index existence verification, seed data insertion, foreign key enforcement, concurrent write behavior with WAL mode."
+  },
+  {
+    "id": 13,
+    "title": "Backend Tests",
+    "agent": "python-test",
+    "status": "not-started",
+    "blocked_by": [8],
+    "description": "Create backend/tests/conftest.py (test DB fixture with in-memory SQLite, test FastAPI client via httpx, mock LiteLLM/agent responses). Create test_admin_api.py (test all admin CRUD endpoints). Create test_participant_api.py (test session creation, respond, exit, completion flows). Create test_generator_agent.py (test agent invocation with mocked LLM). Create test_validator.py (test redundancy detection, goal alignment, compound detection, max-Q enforcement). Create test_services.py (test question_service orchestration, stopping conditions)."
+  },
+  {
+    "id": 14,
+    "title": "Frontend Tests",
+    "agent": "frontend-test",
+    "status": "not-started",
+    "blocked_by": [10, 11],
+    "description": "Set up Vitest + React Testing Library. Create tests for: AdminDashboard (renders survey list), SurveyCreator (form submission), ParticipantSurvey (chat flow, question rendering, answer submission), API client (mock fetch calls), hooks (useSurveySession state management). Ensure all pages render without errors."
+  },
+  {
+    "id": 15,
+    "title": "Backend Code Review",
+    "agent": "backend-reviewer",
+    "status": "not-started",
+    "blocked_by": [13],
+    "description": "Review all Python code in backend/ for: code quality, proper async patterns, error handling, security (SQL injection prevention, input validation), proper separation of concerns, Pydantic model usage, proper exception handling, logging."
+  },
+  {
+    "id": 16,
+    "title": "Frontend Code Review",
+    "agent": "frontend-reviewer",
+    "status": "not-started",
+    "blocked_by": [14],
+    "description": "Review all React code in frontend/ for: TypeScript correctness, component structure, accessibility (ARIA labels, keyboard nav), performance (unnecessary re-renders), proper error handling, loading states, responsive design."
+  },
+  {
+    "id": 17,
+    "title": "Database Review",
+    "agent": "database-reviewer",
+    "status": "not-started",
+    "blocked_by": [12],
+    "description": "Review database schema for: normalization, index coverage for query patterns, foreign key correctness, data type appropriateness, migration safety (rollback support), seed data completeness."
+  },
+  {
+    "id": 18,
+    "title": "Architecture Review",
+    "agent": "architecture-reviewer",
+    "status": "not-started",
+    "blocked_by": [15, 16, 17],
+    "description": "Review cross-module architecture: API contract consistency between backend schemas and frontend types, module boundaries, dependency direction (no circular deps), error propagation across layers, session management design, agent orchestration flow correctness."
+  },
+  {
+    "id": 19,
+    "title": "Documentation",
+    "agent": "documentation",
+    "status": "not-started",
+    "blocked_by": [18],
+    "description": "Create docs/architecture.md (system architecture overview with diagrams). Create docs/api-reference.md (full API reference from OpenAPI spec). Create docs/setup.md (development setup: prerequisites, install, run, env vars). Create docs/admin-guide.md (how to create/manage surveys). Create docs/participant-guide.md (how to take a survey). Update root README.md with project overview, quickstart, and links to docs."
+  },
+  {
+    "id": 20,
+    "title": "Final GitHub Push",
+    "agent": "github",
+    "status": "not-started",
+    "blocked_by": [19],
+    "description": "Ensure all changes are committed. Push feature/cse-mvp branch. Create summary of all commits."
+  }
+]
