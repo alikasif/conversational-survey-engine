@@ -74,7 +74,6 @@ async def generate_question(
                 continue
 
             # Validate the candidate question
-            prior_questions = [q for q, _ in conversation_history]
             is_valid, reason = await validator.validate(
                 candidate_question=candidate,
                 survey=survey,

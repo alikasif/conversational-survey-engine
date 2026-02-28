@@ -1,1 +1,38 @@
-// Chat bubble component — will be implemented by frontend agent
+interface ChatBubbleProps {
+  message: string;
+  isUser: boolean;
+  timestamp?: string;
+}
+
+export default function ChatBubble({
+  message,
+  isUser,
+  timestamp,
+}: ChatBubbleProps) {
+  return (
+    <div
+      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}
+    >
+      <div
+        className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+          isUser
+            ? "bg-indigo-600 text-white rounded-br-md"
+            : "bg-white text-gray-800 border border-gray-200 shadow-sm rounded-bl-md"
+        }`}
+      >
+        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+          {message}
+        </p>
+        {timestamp && (
+          <p
+            className={`text-xs mt-1 ${
+              isUser ? "text-indigo-200" : "text-gray-400"
+            }`}
+          >
+            {new Date(timestamp).toLocaleTimeString()}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
