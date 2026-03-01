@@ -5,70 +5,62 @@
     "assigned_to": "github",
     "status": "done",
     "blocked_by": [],
-    "description": "Create branch 'feature/anti-rabbit-hole' from current HEAD. No new files to scaffold — this is a modification to existing code."
+    "description": "Create branch 'feature/llm-validator' from current HEAD. No new files to scaffold — this is a modification to existing code."
   },
   {
     "id": 2,
-    "title": "Rewrite system prompt and prompt builder in prompts.py",
+    "title": "Add validator and coverage prompts to prompts.py",
     "assigned_to": "python_coder",
     "status": "done",
     "blocked_by": [1],
-    "description": "In backend/app/agents/prompts.py: (1) Rewrite GENERATOR_SYSTEM_PROMPT — remove Rule 5 'go deeper', add anti-rabbit-hole guidelines that prioritize breadth-first exploration, instruct each question to independently contribute a new data point. (2) Extend build_generator_prompt() — add question_number:int=1 and max_questions:int=10 parameters, add 'Survey Progress' section showing question N of M with remaining count, add 'Topics Already Explored' section after conversation history telling the LLM to not revisit the same subtopic as the last exchange, update task instruction to demand NEW insights for the research goal."
+    "description": "Add VALIDATOR_SYSTEM_PROMPT, build_validator_prompt(), COVERAGE_SYSTEM_PROMPT, and build_coverage_prompt() to backend/app/agents/prompts.py. The validator prompt must instruct the LLM to evaluate 4 criteria (redundancy, goal_alignment, context_relevance, topic_drift) and return structured JSON with {pass: bool, reason: str|null} for each. The coverage prompt must instruct the LLM to estimate goal coverage as a float 0.0-1.0 with reasoning. Keep all existing prompt code unchanged."
   },
   {
     "id": 3,
-    "title": "Add context relevance and topic drift checks to validator.py",
+    "title": "Add GEMINI_VALIDATOR_MODEL to config and .env",
     "assigned_to": "python_coder",
     "status": "done",
     "blocked_by": [1],
-    "description": "In backend/app/agents/validator.py: (1) Raise goal_alignment_threshold default from 0.3 to 0.45. (2) Add context_similarity_threshold=0.7 and topic_drift_threshold=0.80 to __init__. (3) Add check_context_relevance(question, context, threshold) method — embedding similarity between candidate question and survey.context, reject if below threshold. (4) Add check_topic_drift(question, prior_questions) method — embedding similarity between candidate and LAST question only (not all prior), reject if > topic_drift_threshold with message about rabbit-holing. (5) Wire both new checks into validate() — context relevance after goal alignment, topic drift after context relevance."
+    "description": "Add GEMINI_VALIDATOR_MODEL: str = 'gemini/gemini-2.0-flash' to backend/app/core/config.py Settings class. Add GEMINI_VALIDATOR_MODEL=gemini/gemini-2.0-flash to backend/.env file."
   },
   {
     "id": 4,
-    "title": "Pass question_number through generator_agent.py",
+    "title": "Rewrite validator.py to use LLM instead of embeddings",
     "assigned_to": "python_coder",
     "status": "done",
-    "blocked_by": [2],
-    "description": "In backend/app/agents/generator_agent.py: (1) Add question_number:int=1 parameter to generate_question(). (2) Pass question_number and survey.max_questions to build_generator_prompt() call."
+    "blocked_by": [2, 3],
+    "description": "Major rewrite of backend/app/agents/validator.py. REMOVE: cosine_similarity(), get_embedding(), check_redundancy(), check_goal_alignment(), check_context_relevance(), check_topic_drift() methods. Remove all threshold parameters from __init__ (redundancy_threshold, goal_alignment_threshold, context_similarity_threshold, topic_drift_threshold). REMOVE the numpy import. ADD: _get_validator_model() helper that reads settings.GEMINI_VALIDATOR_MODEL. ADD: validate_with_llm(candidate_question, survey, conversation_history) that calls litellm.acompletion() with the validator prompt from prompts.py, parses JSON response, returns (is_valid, rejection_reason). On any failure (JSON parse, LLM error), log warning and return (True, None) as graceful fallback. ADD: estimate_goal_coverage(conversation_history, goal) using litellm.acompletion() with coverage prompt, parsing float from JSON. On failure, return 0.0. UPDATE validate() to: 1) check_compound_question, 2) check_leading_question, 3) validate_with_llm. Keep check_compound_question and check_leading_question EXACTLY as they are. Use response_format={'type': 'json_object'} in the acompletion calls."
   },
   {
     "id": 5,
-    "title": "Compute and pass question_number in question_service.py",
-    "assigned_to": "python_coder",
+    "title": "Rewrite validator tests for LLM-based validation",
+    "assigned_to": "python_test",
     "status": "done",
     "blocked_by": [4],
-    "description": "In backend/app/services/question_service.py: (1) Compute question_number = session.question_count + 1 BEFORE calling generate_question(). (2) Pass question_number to generate_question()."
+    "description": "Rewrite backend/tests/test_validator.py. KEEP UNCHANGED: all rule-based tests (test_check_compound_question_*, test_check_leading_question_*, test_max_questions_*). REWRITE: all embedding-mocking tests to mock litellm.acompletion instead. Create a helper that builds mock LLM response objects with structured JSON content. ADD TESTS: (1) test_validate_with_llm_all_pass - all 4 criteria pass, (2) test_validate_with_llm_redundancy_fail, (3) test_validate_with_llm_goal_alignment_fail, (4) test_validate_with_llm_context_relevance_fail, (5) test_validate_with_llm_topic_drift_fail, (6) test_validate_with_llm_json_parse_error_fallback - returns valid on bad JSON, (7) test_validate_with_llm_exception_fallback - returns valid on LLM error, (8) test_estimate_goal_coverage_llm - returns float from LLM, (9) test_estimate_goal_coverage_llm_error_fallback - returns 0.0 on error. Mock litellm.acompletion at 'app.agents.validator.litellm' path. Ensure all tests pass with pytest."
   },
   {
     "id": 6,
-    "title": "Update and add tests for all changes",
-    "assigned_to": "python_test",
+    "title": "Backend code review",
+    "assigned_to": "backend_reviewer",
     "status": "done",
-    "blocked_by": [2, 3, 4, 5],
-    "description": "Update backend/tests/: (1) test_validator.py — add test_check_context_relevance_passes (mock embeddings same direction, verify passes), test_check_context_relevance_fails (mock embeddings opposite direction, verify rejection with 'context' in reason), test_check_topic_drift_detects_rabbit_hole (mock last question same embedding, verify rejection with 'rabbit-holing' in reason), test_check_topic_drift_passes_diverse (mock different embeddings, verify passes). Also update FakeSurvey in validate tests to include context attribute. (2) test_generator_agent.py — update test_generate_question_with_history to verify prompt contains 'Survey Progress', update _make_fake_survey to include max_questions. (3) test_services.py — update any mocks of generate_question to accept question_number parameter. (4) Run all tests and ensure they pass."
+    "blocked_by": [4, 5],
+    "description": "Review backend/app/agents/validator.py, backend/app/agents/prompts.py, and backend/app/core/config.py for: (1) LLM prompt quality and clarity, (2) proper error handling and graceful fallbacks, (3) JSON parsing robustness, (4) no leftover embedding code or imports, (5) proper async patterns. File all issues as feedback."
   },
   {
     "id": 7,
-    "title": "Review backend changes",
-    "assigned_to": "backend_reviewer",
+    "title": "Architecture review",
+    "assigned_to": "architecture_reviewer",
     "status": "done",
-    "blocked_by": [6],
-    "description": "Review all modified files in backend/app/agents/ and backend/app/services/ for: correctness of embedding threshold values, proper error handling in new validator methods, backward compatibility of new parameters, prompt quality and clarity, code style consistency."
+    "blocked_by": [4, 5],
+    "description": "Review the full change set for: (1) validate() and estimate_goal_coverage() interface stability - signatures must be unchanged, (2) no API contract breakage, (3) no frontend impact, (4) proper separation of concerns between prompts.py and validator.py, (5) model configuration approach is correct."
   },
   {
     "id": 8,
-    "title": "Architecture review — verify no API breakage",
-    "assigned_to": "architecture_reviewer",
-    "status": "done",
-    "blocked_by": [6],
-    "description": "Verify: (1) No API contract changes — request/response schemas unchanged. (2) All new function parameters have defaults — backward compatible. (3) New validator checks fail gracefully on embedding errors. (4) Overall approach correctly addresses rabbit-holing without over-constraining generation."
-  },
-  {
-    "id": 9,
-    "title": "Commit and push feature branch",
+    "title": "Push final changes to branch",
     "assigned_to": "github",
-    "status": "in_progress",
-    "blocked_by": [7, 8],
-    "description": "Stage all modified files, commit with message 'feat: anti-rabbit-hole question focus — breadth-first generation, topic drift detection, context relevance validation', push to feature/anti-rabbit-hole branch."
+    "status": "not_started",
+    "blocked_by": [6, 7],
+    "description": "Commit all changes and push to 'feature/llm-validator' branch. Commit message: 'feat: replace embedding-based validator with LLM-based validation'."
   }
 ]

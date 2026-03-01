@@ -1,15 +1,20 @@
-"""Question validator with embedding similarity, rule-based checks, and goal coverage."""
+"""Question validator with LLM-based semantic checks, rule-based checks, and goal coverage."""
 
 import json
 import logging
-import math
-import os
 import re
 from typing import List, Optional, Tuple
 
 import litellm
 from dotenv import load_dotenv
 
+from app.agents.prompts import (
+    COVERAGE_SYSTEM_PROMPT,
+    VALIDATOR_SYSTEM_PROMPT,
+    build_coverage_prompt,
+    build_validator_prompt,
+)
+from app.core.config import settings
 from app.models.survey import Survey
 
 load_dotenv(override=True)
@@ -17,46 +22,16 @@ load_dotenv(override=True)
 logger = logging.getLogger(__name__)
 
 
-def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
-    """Compute cosine similarity between two vectors without numpy."""
-    dot = sum(a * b for a, b in zip(vec_a, vec_b))
-    mag_a = math.sqrt(sum(a * a for a in vec_a))
-    mag_b = math.sqrt(sum(b * b for b in vec_b))
-    if mag_a == 0 or mag_b == 0:
-        return 0.0
-    return dot / (mag_a * mag_b)
-
-
-async def get_embedding(text: str) -> List[float]:
-    """Get embedding vector for text using LiteLLM."""
-    try:
-        model = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini/text-embedding-004")
-        api_key = os.getenv("GEMINI_API_KEY")
-        response = await litellm.aembedding(
-            model=model,
-            input=[text],
-            api_key=api_key,
-        )
-        return response.data[0]["embedding"]
-    except Exception as e:
-        logger.error(f"Embedding error: {e}")
-        return []
+def _get_validator_model() -> str:
+    """Return the model name to use for validation calls."""
+    return settings.GEMINI_VALIDATOR_MODEL
 
 
 class QuestionValidator:
     """Validates candidate survey questions against multiple criteria."""
 
-    def __init__(
-        self,
-        redundancy_threshold: float = 0.85,
-        goal_alignment_threshold: float = 0.45,
-        context_similarity_threshold: float = 0.7,
-        topic_drift_threshold: float = 0.80,
-    ):
-        self.redundancy_threshold = redundancy_threshold
-        self.goal_alignment_threshold = goal_alignment_threshold
-        self.context_similarity_threshold = context_similarity_threshold
-        self.topic_drift_threshold = topic_drift_threshold
+    def __init__(self) -> None:
+        pass
 
     async def validate(
         self,
@@ -79,158 +54,69 @@ class QuestionValidator:
         if is_leading:
             return False, reason
 
-        # Check redundancy against prior questions (requires embedding)
-        prior_questions = [q for q, _ in conversation_history]
-        if prior_questions:
-            is_redundant, reason = await self.check_redundancy(
-                candidate_question, prior_questions, self.redundancy_threshold
-            )
-            if is_redundant:
-                return False, reason
-
-        # Check goal alignment (requires embedding)
-        try:
-            is_aligned, reason = await self.check_goal_alignment(
-                candidate_question, survey.goal
-            )
-            if not is_aligned:
-                return False, reason
-        except Exception as e:
-            logger.warning(f"Goal alignment check failed: {e}, skipping")
-
-        # Check context relevance (requires embedding)
-        context = getattr(survey, "context", None)
-        if context:
-            threshold = getattr(
-                survey,
-                "context_similarity_threshold",
-                self.context_similarity_threshold,
-            )
-            is_relevant, reason = await self.check_context_relevance(
-                candidate_question, context, threshold=threshold
-            )
-            if not is_relevant:
-                return False, reason
-
-        # Check topic drift (requires embedding)
-        if prior_questions:
-            is_drifting, reason = await self.check_topic_drift(
-                candidate_question, prior_questions
-            )
-            if is_drifting:
-                return False, reason
+        # LLM-based semantic checks (redundancy, goal alignment, context relevance, topic drift)
+        is_valid, reason = await self.validate_with_llm(
+            candidate_question, survey, conversation_history
+        )
+        if not is_valid:
+            return False, reason
 
         return True, None
 
-    async def check_redundancy(
+    async def validate_with_llm(
         self,
-        question: str,
-        prior_questions: List[str],
-        threshold: float = 0.85,
+        candidate_question: str,
+        survey: Survey,
+        conversation_history: List[Tuple[str, str]],
     ) -> Tuple[bool, Optional[str]]:
-        """Check if question is too similar to prior questions."""
-        try:
-            q_embedding = await get_embedding(question)
-            if not q_embedding:
-                return False, None
-
-            for prior in prior_questions:
-                prior_embedding = await get_embedding(prior)
-                if not prior_embedding:
-                    continue
-                sim = cosine_similarity(q_embedding, prior_embedding)
-                if sim > threshold:
-                    return True, (
-                        f"Question too similar to a previous question "
-                        f"(similarity: {sim:.2f}). Ask something different."
-                    )
-        except Exception as e:
-            logger.warning(f"Redundancy check failed: {e}")
-
-        return False, None
-
-    async def check_goal_alignment(
-        self, question: str, goal: str
-    ) -> Tuple[bool, Optional[str]]:
-        """Check if question is aligned with the survey goal."""
-        try:
-            q_embedding = await get_embedding(question)
-            g_embedding = await get_embedding(goal)
-            if not q_embedding or not g_embedding:
-                return True, None  # Can't check, assume aligned
-
-            sim = cosine_similarity(q_embedding, g_embedding)
-            if sim < self.goal_alignment_threshold:
-                return False, (
-                    f"Question appears off-topic relative to the survey goal "
-                    f"(similarity: {sim:.2f}). Stay focused on the goal."
-                )
-        except Exception as e:
-            logger.warning(f"Goal alignment check failed: {e}")
-
-        return True, None
-
-    async def check_context_relevance(
-        self,
-        question: str,
-        context: str,
-        threshold: float = 0.7,
-    ) -> Tuple[bool, Optional[str]]:
-        """Check if question is relevant to the survey context.
+        """Run all 4 semantic checks via a single LLM call.
 
         Returns:
-            Tuple of (is_relevant, rejection_reason).
+            Tuple of (is_valid, rejection_reason). On any error, returns (True, None)
+            as a graceful fallback.
         """
         try:
-            q_embedding = await get_embedding(question)
-            c_embedding = await get_embedding(context)
-            if not q_embedding or not c_embedding:
-                return True, None  # Can't check, assume relevant
+            context = getattr(survey, "context", "") or ""
+            user_prompt = build_validator_prompt(
+                candidate_question=candidate_question,
+                goal=survey.goal,
+                context=context,
+                conversation_history=conversation_history,
+            )
 
-            sim = cosine_similarity(q_embedding, c_embedding)
-            if sim < threshold:
-                return False, (
-                    f"Question drifts outside the survey context "
-                    f"(similarity: {sim:.2f}). Keep the question grounded "
-                    f"in the survey's subject matter."
-                )
+            model = _get_validator_model()
+            api_key = settings.effective_api_key
+            kwargs: dict = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": VALIDATOR_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.0,
+            }
+            if api_key and not model.startswith("vertex_ai/"):
+                kwargs["api_key"] = api_key
+
+            response = await litellm.acompletion(**kwargs)
+            raw = response.choices[0].message.content
+            result = json.loads(raw)
+
+            # Check each criterion
+            for criterion in ("redundancy", "goal_alignment", "context_relevance", "topic_drift"):
+                entry = result.get(criterion, {})
+                if not entry.get("pass", True):
+                    reason = entry.get("reason") or f"Failed {criterion} check."
+                    return False, reason
+
+            return True, None
+
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            logger.warning(f"Validator LLM JSON parse error: {e} — falling back to valid")
+            return True, None
         except Exception as e:
-            logger.warning(f"Context relevance check failed: {e}")
-
-        return True, None
-
-    async def check_topic_drift(
-        self,
-        question: str,
-        prior_questions: List[str],
-    ) -> Tuple[bool, Optional[str]]:
-        """Check if question is too similar to the last question asked.
-
-        Returns:
-            Tuple of (is_drifting, rejection_reason).
-        """
-        if not prior_questions:
-            return False, None
-
-        try:
-            last_question = prior_questions[-1]
-            q_embedding = await get_embedding(question)
-            last_embedding = await get_embedding(last_question)
-            if not q_embedding or not last_embedding:
-                return False, None
-
-            sim = cosine_similarity(q_embedding, last_embedding)
-            if sim > self.topic_drift_threshold:
-                return True, (
-                    f"Question is too similar to the last question asked "
-                    f"(similarity: {sim:.2f}). This looks like rabbit-holing "
-                    f"into the same subtopic. Move to a different aspect of "
-                    f"the research goal."
-                )
-        except Exception as e:
-            logger.warning(f"Topic drift check failed: {e}")
-
-        return False, None
+            logger.warning(f"Validator LLM call failed: {e} — falling back to valid")
+            return True, None
 
     def check_compound_question(
         self, question: str
@@ -290,7 +176,7 @@ class QuestionValidator:
         conversation_history: List[Tuple[str, str]],
         goal: str,
     ) -> float:
-        """Estimate how well the conversation covers the survey goal.
+        """Estimate how well the conversation covers the survey goal using an LLM.
 
         Returns a score between 0.0 and 1.0.
         """
@@ -298,20 +184,30 @@ class QuestionValidator:
             return 0.0
 
         try:
-            goal_embedding = await get_embedding(goal)
-            if not goal_embedding:
-                return 0.0
+            user_prompt = build_coverage_prompt(goal, conversation_history)
+            model = _get_validator_model()
+            api_key = settings.effective_api_key
+            kwargs: dict = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": COVERAGE_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.0,
+            }
+            if api_key and not model.startswith("vertex_ai/"):
+                kwargs["api_key"] = api_key
 
-            # Combine all Q&A into a single text and check similarity to goal
-            combined = " ".join(
-                f"{q} {a}" for q, a in conversation_history
-            )
-            combined_embedding = await get_embedding(combined)
-            if not combined_embedding:
-                return 0.0
-
-            coverage = cosine_similarity(goal_embedding, combined_embedding)
+            response = await litellm.acompletion(**kwargs)
+            raw = response.choices[0].message.content
+            result = json.loads(raw)
+            coverage = float(result.get("coverage", 0.0))
             return max(0.0, min(1.0, coverage))
+
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+            logger.warning(f"Coverage LLM JSON parse error: {e} — returning 0.0")
+            return 0.0
         except Exception as e:
-            logger.warning(f"Goal coverage estimation failed: {e}")
+            logger.warning(f"Coverage LLM call failed: {e} — returning 0.0")
             return 0.0

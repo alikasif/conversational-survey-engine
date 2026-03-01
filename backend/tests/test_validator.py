@@ -1,5 +1,7 @@
-"""Tests for the QuestionValidator (rule-based + mocked embedding checks)."""
+"""Tests for the QuestionValidator (rule-based + mocked LLM checks)."""
 
+import json
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -10,6 +12,48 @@ from app.agents.validator import QuestionValidator
 @pytest.fixture()
 def validator():
     return QuestionValidator()
+
+
+def _make_llm_response(content: dict | str) -> SimpleNamespace:
+    """Build a mock LLM response object matching litellm's shape."""
+    if isinstance(content, dict):
+        content = json.dumps(content)
+    return SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content=content)
+            )
+        ]
+    )
+
+
+def _all_pass_response() -> SimpleNamespace:
+    """Return a mock response where all 4 criteria pass."""
+    return _make_llm_response({
+        "redundancy": {"pass": True, "reason": None},
+        "goal_alignment": {"pass": True, "reason": None},
+        "context_relevance": {"pass": True, "reason": None},
+        "topic_drift": {"pass": True, "reason": None},
+    })
+
+
+def _fail_criterion(criterion: str, reason: str) -> SimpleNamespace:
+    """Return a mock response where one specific criterion fails."""
+    data = {
+        "redundancy": {"pass": True, "reason": None},
+        "goal_alignment": {"pass": True, "reason": None},
+        "context_relevance": {"pass": True, "reason": None},
+        "topic_drift": {"pass": True, "reason": None},
+    }
+    data[criterion] = {"pass": False, "reason": reason}
+    return _make_llm_response(data)
+
+
+class FakeSurvey:
+    goal = "Understand employee satisfaction"
+    constraints = "[]"
+    context = "Employee well-being study"
+    context_similarity_threshold = 0.7
 
 
 # ---------------------------------------------------------------------------
@@ -113,103 +157,141 @@ async def test_check_max_questions_under_limit(validator):
 
 
 # ---------------------------------------------------------------------------
-# Redundancy check (embedding mocked)
-# ---------------------------------------------------------------------------
-
-MOCK_EMBEDDING_A = [0.1, 0.2, 0.3, 0.4]
-MOCK_EMBEDDING_B = [0.1, 0.2, 0.3, 0.4]  # identical → similarity ≈ 1.0
-MOCK_EMBEDDING_C = [-0.4, -0.3, -0.2, -0.1]  # very different
-
-
-@pytest.mark.asyncio
-async def test_check_redundancy_detects_similar(validator):
-    """Highly similar embeddings are flagged as redundant."""
-    with patch(
-        "app.agents.validator.get_embedding",
-        new_callable=AsyncMock,
-        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_B],
-    ):
-        is_redundant, reason = await validator.check_redundancy(
-            "What is your role?", ["What is your role?"], threshold=0.85
-        )
-    assert is_redundant is True
-    assert "similar" in reason.lower()
-
-
-@pytest.mark.asyncio
-async def test_check_redundancy_passes_different(validator):
-    """Dissimilar embeddings pass the redundancy check."""
-    with patch(
-        "app.agents.validator.get_embedding",
-        new_callable=AsyncMock,
-        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_C],
-    ):
-        is_redundant, reason = await validator.check_redundancy(
-            "What is your role?",
-            ["How productive do you feel?"],
-            threshold=0.85,
-        )
-    assert is_redundant is False
-
-
-# ---------------------------------------------------------------------------
-# Goal-alignment check (embedding mocked)
+# LLM-based validation (litellm.acompletion mocked)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_check_goal_alignment_passes(validator):
-    """Aligned question passes goal alignment check."""
-    # Same direction → high similarity
+async def test_validate_with_llm_all_pass(validator):
+    """All 4 LLM criteria pass → question is valid."""
     with patch(
-        "app.agents.validator.get_embedding",
+        "app.agents.validator.litellm.acompletion",
         new_callable=AsyncMock,
-        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_A],
+        return_value=_all_pass_response(),
     ):
-        is_aligned, reason = await validator.check_goal_alignment(
-            "How satisfied are you with remote work?",
-            "Understand employee satisfaction with remote work",
+        is_valid, reason = await validator.validate_with_llm(
+            "How do you feel about the recent changes?",
+            FakeSurvey(),
+            [],
         )
-    assert is_aligned is True
+    assert is_valid is True
     assert reason is None
 
 
 @pytest.mark.asyncio
-async def test_check_goal_alignment_fails(validator):
-    """Off-topic question fails goal alignment check."""
+async def test_validate_with_llm_redundancy_fail(validator):
+    """Redundancy criterion fails → question is rejected."""
     with patch(
-        "app.agents.validator.get_embedding",
+        "app.agents.validator.litellm.acompletion",
         new_callable=AsyncMock,
-        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_C],
+        return_value=_fail_criterion("redundancy", "Too similar to Q1."),
     ):
-        v = QuestionValidator(goal_alignment_threshold=0.3)
-        is_aligned, reason = await v.check_goal_alignment(
-            "What is your favourite colour?",
-            "Understand employee satisfaction with remote work",
+        is_valid, reason = await validator.validate_with_llm(
+            "What is your role?",
+            FakeSurvey(),
+            [("What is your role?", "I'm a developer.")],
         )
-    assert is_aligned is False
-    assert "off-topic" in reason.lower()
+    assert is_valid is False
+    assert "similar" in reason.lower() or "redundancy" in reason.lower() or "Q1" in reason
+
+
+@pytest.mark.asyncio
+async def test_validate_with_llm_goal_alignment_fail(validator):
+    """Goal alignment criterion fails → question is rejected."""
+    with patch(
+        "app.agents.validator.litellm.acompletion",
+        new_callable=AsyncMock,
+        return_value=_fail_criterion("goal_alignment", "Off-topic from the research goal."),
+    ):
+        is_valid, reason = await validator.validate_with_llm(
+            "What is your favourite colour?",
+            FakeSurvey(),
+            [],
+        )
+    assert is_valid is False
+    assert "off-topic" in reason.lower() or "goal" in reason.lower()
+
+
+@pytest.mark.asyncio
+async def test_validate_with_llm_context_relevance_fail(validator):
+    """Context relevance criterion fails → question is rejected."""
+    with patch(
+        "app.agents.validator.litellm.acompletion",
+        new_callable=AsyncMock,
+        return_value=_fail_criterion("context_relevance", "Drifts outside the survey context."),
+    ):
+        is_valid, reason = await validator.validate_with_llm(
+            "How do you feel about football?",
+            FakeSurvey(),
+            [],
+        )
+    assert is_valid is False
+    assert "context" in reason.lower() or "drift" in reason.lower()
+
+
+@pytest.mark.asyncio
+async def test_validate_with_llm_topic_drift_fail(validator):
+    """Topic drift criterion fails → question is rejected."""
+    with patch(
+        "app.agents.validator.litellm.acompletion",
+        new_callable=AsyncMock,
+        return_value=_fail_criterion("topic_drift", "Rabbit-holing into same subtopic."),
+    ):
+        is_valid, reason = await validator.validate_with_llm(
+            "Tell me more about communication?",
+            FakeSurvey(),
+            [("How do you communicate remotely?", "We use Slack.")],
+        )
+    assert is_valid is False
+    assert "rabbit" in reason.lower() or "topic" in reason.lower() or "subtopic" in reason.lower()
+
+
+@pytest.mark.asyncio
+async def test_validate_with_llm_json_parse_error_fallback(validator):
+    """On bad JSON from LLM, gracefully fall back to valid."""
+    with patch(
+        "app.agents.validator.litellm.acompletion",
+        new_callable=AsyncMock,
+        return_value=_make_llm_response("this is not json {{{"),
+    ):
+        is_valid, reason = await validator.validate_with_llm(
+            "How do you feel about the changes?",
+            FakeSurvey(),
+            [],
+        )
+    assert is_valid is True
+    assert reason is None
+
+
+@pytest.mark.asyncio
+async def test_validate_with_llm_exception_fallback(validator):
+    """On LLM call exception, gracefully fall back to valid."""
+    with patch(
+        "app.agents.validator.litellm.acompletion",
+        new_callable=AsyncMock,
+        side_effect=RuntimeError("LLM service unavailable"),
+    ):
+        is_valid, reason = await validator.validate_with_llm(
+            "How do you feel about the changes?",
+            FakeSurvey(),
+            [],
+        )
+    assert is_valid is True
+    assert reason is None
 
 
 # ---------------------------------------------------------------------------
-# Full validate() pipeline (all embedding calls mocked)
+# Full validate() pipeline (LLM mocked)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_validate_passes_good_question(validator):
-    """A well-formed, aligned, non-redundant question passes validation."""
-    # Build a minimal Survey-like object
-    class FakeSurvey:
-        goal = "Understand employee satisfaction"
-        constraints = "[]"
-        context = "Employee well-being study"
-        context_similarity_threshold = 0.7
-
+    """A well-formed, LLM-approved question passes full validation."""
     with patch(
-        "app.agents.validator.get_embedding",
+        "app.agents.validator.litellm.acompletion",
         new_callable=AsyncMock,
-        return_value=MOCK_EMBEDDING_A,
+        return_value=_all_pass_response(),
     ):
         is_valid, reason = await validator.validate(
             candidate_question="How do you feel about the recent changes?",
@@ -222,14 +304,7 @@ async def test_validate_passes_good_question(validator):
 
 @pytest.mark.asyncio
 async def test_validate_rejects_compound(validator):
-    """Compound questions are rejected during full validation."""
-
-    class FakeSurvey:
-        goal = "Understand employee satisfaction"
-        constraints = "[]"
-        context = "Employee well-being study"
-        context_similarity_threshold = 0.7
-
+    """Compound questions are rejected before LLM call."""
     is_valid, reason = await validator.validate(
         candidate_question="What is your role? And how long have you been there?",
         survey=FakeSurvey(),
@@ -240,76 +315,46 @@ async def test_validate_rejects_compound(validator):
 
 
 # ---------------------------------------------------------------------------
-# Context-relevance check (embedding mocked)
+# Goal coverage estimation (LLM mocked)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_check_context_relevance_passes(validator):
-    """Question relevant to the survey context passes the check."""
+async def test_estimate_goal_coverage_llm(validator):
+    """LLM returns a coverage float."""
+    coverage_response = _make_llm_response({
+        "coverage": 0.65,
+        "reasoning": "Covered aspects X and Y but not Z.",
+    })
     with patch(
-        "app.agents.validator.get_embedding",
+        "app.agents.validator.litellm.acompletion",
         new_callable=AsyncMock,
-        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_A],
+        return_value=coverage_response,
     ):
-        is_relevant, reason = await validator.check_context_relevance(
-            "How satisfied are you with remote work?",
-            "Employee well-being study",
-            threshold=0.7,
+        score = await validator.estimate_goal_coverage(
+            [("How do you feel?", "Good overall.")],
+            "Understand employee satisfaction",
         )
-    assert is_relevant is True
-    assert reason is None
+    assert score == pytest.approx(0.65)
 
 
 @pytest.mark.asyncio
-async def test_check_context_relevance_fails(validator):
-    """Question irrelevant to the survey context is rejected."""
-    with patch(
-        "app.agents.validator.get_embedding",
-        new_callable=AsyncMock,
-        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_C],
-    ):
-        is_relevant, reason = await validator.check_context_relevance(
-            "What is your favourite colour?",
-            "Employee well-being study",
-            threshold=0.7,
-        )
-    assert is_relevant is False
-    assert "context" in reason.lower()
-
-
-# ---------------------------------------------------------------------------
-# Topic drift check (embedding mocked)
-# ---------------------------------------------------------------------------
+async def test_estimate_goal_coverage_empty_history(validator):
+    """Empty conversation history returns 0.0 without LLM call."""
+    score = await validator.estimate_goal_coverage([], "Understand employee satisfaction")
+    assert score == 0.0
 
 
 @pytest.mark.asyncio
-async def test_check_topic_drift_detects_rabbit_hole(validator):
-    """A question too similar to the last one is flagged as topic drift."""
+async def test_estimate_goal_coverage_llm_error_fallback(validator):
+    """On LLM error, coverage returns 0.0."""
     with patch(
-        "app.agents.validator.get_embedding",
+        "app.agents.validator.litellm.acompletion",
         new_callable=AsyncMock,
-        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_B],
+        side_effect=RuntimeError("LLM unavailable"),
     ):
-        is_drifting, reason = await validator.check_topic_drift(
-            "Tell me more about remote work communication?",
-            ["How do you communicate while working remotely?"],
+        score = await validator.estimate_goal_coverage(
+            [("How do you feel?", "Fine.")],
+            "Understand employee satisfaction",
         )
-    assert is_drifting is True
-    assert "rabbit-holing" in reason.lower()
-
-
-@pytest.mark.asyncio
-async def test_check_topic_drift_passes_diverse(validator):
-    """A diverse question passes the topic drift check."""
-    with patch(
-        "app.agents.validator.get_embedding",
-        new_callable=AsyncMock,
-        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_C],
-    ):
-        is_drifting, reason = await validator.check_topic_drift(
-            "What tools help you stay productive?",
-            ["How do you communicate while working remotely?"],
-        )
-    assert is_drifting is False
-    assert reason is None
+    assert score == 0.0
