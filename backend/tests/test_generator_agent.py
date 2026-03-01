@@ -14,7 +14,6 @@ def _make_fake_survey(**overrides):
         "goal": "Understand factors affecting well-being in remote work.",
         "constraints": '["Do not ask about salary"]',
         "max_questions": 10,
-        "context_similarity_threshold": 0.7,
     }
     defaults.update(overrides)
     survey = MagicMock()

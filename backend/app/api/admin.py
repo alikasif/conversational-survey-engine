@@ -37,7 +37,6 @@ def _survey_to_response(survey) -> SurveyResponse:
         max_questions=survey.max_questions,
         completion_criteria=survey.completion_criteria,
         goal_coverage_threshold=survey.goal_coverage_threshold,
-        context_similarity_threshold=survey.context_similarity_threshold,
         is_active=survey.is_active,
         created_at=survey.created_at,
         updated_at=survey.updated_at,

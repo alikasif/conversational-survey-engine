@@ -53,7 +53,6 @@ class FakeSurvey:
     goal = "Understand employee satisfaction"
     constraints = "[]"
     context = "Employee well-being study"
-    context_similarity_threshold = 0.7
 
 
 # ---------------------------------------------------------------------------

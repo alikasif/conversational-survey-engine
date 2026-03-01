@@ -12,7 +12,7 @@ from app.agents.validator import QuestionValidator
 from app.models.response import Response
 from app.models.session import Session
 from app.models.survey import Survey
-from app.repositories import response_repo, session_repo
+from app.repositories import response_repo, session_repo, survey_repo
 from app.schemas.session import QuestionPayload
 
 logger = logging.getLogger(__name__)
@@ -112,8 +112,6 @@ async def process_answer(
             "session_id": session_id,
             "status": session.status,
         }
-
-    from app.repositories import survey_repo
 
     survey = await survey_repo.get_by_id(db, survey_id)
     if not survey:

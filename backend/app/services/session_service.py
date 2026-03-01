@@ -50,6 +50,10 @@ async def create_session(
     )
     await session_repo.create(db, session)
 
+    # Commit user + session BEFORE the slow LLM call so we don't hold
+    # the SQLite write lock during question generation.
+    await db.commit()
+
     # Generate first question
     question_payload = await question_service.generate_next_question(
         session=session, survey=survey, db=db

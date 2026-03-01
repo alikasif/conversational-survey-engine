@@ -73,7 +73,6 @@ SURVEY_PAYLOAD = {
     "max_questions": 5,
     "completion_criteria": "Cover work environment, collaboration, and well-being.",
     "goal_coverage_threshold": 0.85,
-    "context_similarity_threshold": 0.7,
 }
 
 

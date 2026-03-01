@@ -6,7 +6,6 @@ import re
 from typing import List, Optional, Tuple
 
 import litellm
-from dotenv import load_dotenv
 
 from app.agents.prompts import (
     COVERAGE_SYSTEM_PROMPT,
@@ -16,8 +15,6 @@ from app.agents.prompts import (
 )
 from app.core.config import settings
 from app.models.survey import Survey
-
-load_dotenv(override=True)
 
 logger = logging.getLogger(__name__)
 

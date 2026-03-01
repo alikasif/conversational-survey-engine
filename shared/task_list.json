@@ -1,66 +1,42 @@
 [
   {
     "id": 1,
-    "title": "Initialize Git & Push Scaffold",
+    "title": "Create branch chore/arch-cleanup",
     "assigned_to": "github",
     "status": "done",
     "blocked_by": [],
-    "description": "Create branch 'feature/llm-validator' from current HEAD. No new files to scaffold — this is a modification to existing code."
+    "description": "Create branch 'chore/arch-cleanup' from current HEAD."
   },
   {
     "id": 2,
-    "title": "Add validator and coverage prompts to prompts.py",
+    "title": "Apply all 7 architecture cleanup fixes",
     "assigned_to": "python_coder",
     "status": "done",
     "blocked_by": [1],
-    "description": "Add VALIDATOR_SYSTEM_PROMPT, build_validator_prompt(), COVERAGE_SYSTEM_PROMPT, and build_coverage_prompt() to backend/app/agents/prompts.py. The validator prompt must instruct the LLM to evaluate 4 criteria (redundancy, goal_alignment, context_relevance, topic_drift) and return structured JSON with {pass: bool, reason: str|null} for each. The coverage prompt must instruct the LLM to estimate goal coverage as a float 0.0-1.0 with reasoning. Keep all existing prompt code unchanged."
+    "description": "Apply all 7 fixes from the plan. Read each file before editing. Workspace root: d:\\GitHub\\conversational-survey-engine. Fix 1: In backend/app/core/database.py — remove the get_db() async generator function (lines ~47-56) and remove the unused 'from typing import AsyncGenerator' import if no longer needed. The canonical get_db lives in dependencies.py. Fix 2: In backend/app/agents/validator.py — remove 'from dotenv import load_dotenv' and 'load_dotenv(override=True)' lines. In backend/app/agents/generator_agent.py — remove 'from dotenv import load_dotenv', 'load_dotenv(override=True)', and 'import os'. Rewrite get_model() to use settings: import settings from app.core.config, use settings.GEMINI_MODEL instead of os.getenv('GEMINI_MODEL', ...), and settings.effective_api_key instead of os.getenv('GEMINI_API_KEY'). Fix 3: In backend/app/models/survey.py — remove the 'context_similarity_threshold = Column(Float, ...)' line. In backend/app/schemas/survey.py — remove context_similarity_threshold from CreateSurveyRequest, UpdateSurveyRequest, and SurveyResponse classes. In backend/app/api/admin.py — remove context_similarity_threshold from the _survey_to_response() helper. In backend/app/services/survey_service.py — remove context_similarity_threshold from the create_survey() function's Survey() constructor call. Fix 4: In backend/app/models/response.py — remove 'question_embedding = Column(Text, nullable=True)' line. Fix 5: In backend/app/core/config.py — remove the 'GEMINI_EMBEDDING_MODEL: str = ...' line. Fix 6: In backend/app/api/router.py — remove the 'from app.api.health import router as health_router' import and 'api_router.include_router(health_router)' line. Health is already mounted directly in main.py. Fix 7: In backend/app/services/question_service.py — move the inline 'from app.repositories import survey_repo' (inside process_answer()) to the top-level imports alongside the existing 'from app.repositories import response_repo, session_repo'. Change that line to 'from app.repositories import response_repo, session_repo, survey_repo'. Then delete the inline import from inside process_answer()."
   },
   {
     "id": 3,
-    "title": "Add GEMINI_VALIDATOR_MODEL to config and .env",
-    "assigned_to": "python_coder",
+    "title": "Run tests and fix any breakage",
+    "assigned_to": "python_test",
     "status": "done",
-    "blocked_by": [1],
-    "description": "Add GEMINI_VALIDATOR_MODEL: str = 'gemini/gemini-2.0-flash' to backend/app/core/config.py Settings class. Add GEMINI_VALIDATOR_MODEL=gemini/gemini-2.0-flash to backend/.env file."
+    "blocked_by": [2],
+    "description": "Run the full test suite: cd d:\\GitHub\\conversational-survey-engine\\backend && python -m pytest tests/ -v. If any tests fail due to the cleanup (e.g. tests referencing context_similarity_threshold or question_embedding), fix them. Ensure all tests pass."
   },
   {
     "id": 4,
-    "title": "Rewrite validator.py to use LLM instead of embeddings",
-    "assigned_to": "python_coder",
-    "status": "done",
-    "blocked_by": [2, 3],
-    "description": "Major rewrite of backend/app/agents/validator.py. REMOVE: cosine_similarity(), get_embedding(), check_redundancy(), check_goal_alignment(), check_context_relevance(), check_topic_drift() methods. Remove all threshold parameters from __init__ (redundancy_threshold, goal_alignment_threshold, context_similarity_threshold, topic_drift_threshold). REMOVE the numpy import. ADD: _get_validator_model() helper that reads settings.GEMINI_VALIDATOR_MODEL. ADD: validate_with_llm(candidate_question, survey, conversation_history) that calls litellm.acompletion() with the validator prompt from prompts.py, parses JSON response, returns (is_valid, rejection_reason). On any failure (JSON parse, LLM error), log warning and return (True, None) as graceful fallback. ADD: estimate_goal_coverage(conversation_history, goal) using litellm.acompletion() with coverage prompt, parsing float from JSON. On failure, return 0.0. UPDATE validate() to: 1) check_compound_question, 2) check_leading_question, 3) validate_with_llm. Keep check_compound_question and check_leading_question EXACTLY as they are. Use response_format={'type': 'json_object'} in the acompletion calls."
-  },
-  {
-    "id": 5,
-    "title": "Rewrite validator tests for LLM-based validation",
-    "assigned_to": "python_test",
-    "status": "done",
-    "blocked_by": [4],
-    "description": "Rewrite backend/tests/test_validator.py. KEEP UNCHANGED: all rule-based tests (test_check_compound_question_*, test_check_leading_question_*, test_max_questions_*). REWRITE: all embedding-mocking tests to mock litellm.acompletion instead. Create a helper that builds mock LLM response objects with structured JSON content. ADD TESTS: (1) test_validate_with_llm_all_pass - all 4 criteria pass, (2) test_validate_with_llm_redundancy_fail, (3) test_validate_with_llm_goal_alignment_fail, (4) test_validate_with_llm_context_relevance_fail, (5) test_validate_with_llm_topic_drift_fail, (6) test_validate_with_llm_json_parse_error_fallback - returns valid on bad JSON, (7) test_validate_with_llm_exception_fallback - returns valid on LLM error, (8) test_estimate_goal_coverage_llm - returns float from LLM, (9) test_estimate_goal_coverage_llm_error_fallback - returns 0.0 on error. Mock litellm.acompletion at 'app.agents.validator.litellm' path. Ensure all tests pass with pytest."
-  },
-  {
-    "id": 6,
     "title": "Backend code review",
     "assigned_to": "backend_reviewer",
     "status": "done",
-    "blocked_by": [4, 5],
-    "description": "Review backend/app/agents/validator.py, backend/app/agents/prompts.py, and backend/app/core/config.py for: (1) LLM prompt quality and clarity, (2) proper error handling and graceful fallbacks, (3) JSON parsing robustness, (4) no leftover embedding code or imports, (5) proper async patterns. File all issues as feedback."
+    "blocked_by": [3],
+    "description": "Review all modified files for: (1) no leftover references to load_dotenv, os.getenv, context_similarity_threshold, question_embedding, or GEMINI_EMBEDDING_MODEL, (2) no duplicate get_db, (3) health route only at /health not /api/v1/health, (4) no inline imports in services, (5) generator_agent.py uses settings correctly."
   },
   {
-    "id": 7,
-    "title": "Architecture review",
-    "assigned_to": "architecture_reviewer",
-    "status": "done",
-    "blocked_by": [4, 5],
-    "description": "Review the full change set for: (1) validate() and estimate_goal_coverage() interface stability - signatures must be unchanged, (2) no API contract breakage, (3) no frontend impact, (4) proper separation of concerns between prompts.py and validator.py, (5) model configuration approach is correct."
-  },
-  {
-    "id": 8,
-    "title": "Push final changes to branch",
+    "id": 5,
+    "title": "Push changes to branch",
     "assigned_to": "github",
     "status": "not_started",
-    "blocked_by": [6, 7],
-    "description": "Commit all changes and push to 'feature/llm-validator' branch. Commit message: 'feat: replace embedding-based validator with LLM-based validation'."
+    "blocked_by": [4],
+    "description": "Commit all changes and push to 'chore/arch-cleanup' branch. Commit message: 'chore: architecture cleanup — remove dead code, consolidate config, fix duplicates'."
   }
 ]

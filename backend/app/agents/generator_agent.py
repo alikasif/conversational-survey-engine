@@ -2,18 +2,15 @@
 
 import json
 import logging
-import os
 from typing import List, Tuple
 
 from agents import Agent, Runner
 from agents.extensions.models.litellm_model import LitellmModel
-from dotenv import load_dotenv
 
 from app.agents.prompts import GENERATOR_SYSTEM_PROMPT, build_generator_prompt
 from app.agents.validator import QuestionValidator
+from app.core.config import settings
 from app.models.survey import Survey
-
-load_dotenv(override=True)
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +19,9 @@ MAX_RETRIES = 3
 
 
 def get_model(prefix="GEMINI"):
-    """Get LitellmModel configured from environment variables."""
-    model = os.getenv(f"{prefix}_MODEL", "gemini/gemini-2.0-flash")
-    api_key = os.getenv(f"{prefix}_API_KEY")
+    """Get LitellmModel configured from settings."""
+    model = settings.GEMINI_MODEL
+    api_key = settings.effective_api_key
     logger.info(f"Creating model: {model}, api_key={'set' if api_key else 'MISSING'}")
     return LitellmModel(model=model, api_key=api_key)
 

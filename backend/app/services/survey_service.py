@@ -26,7 +26,6 @@ async def create_survey(
         max_questions=request.max_questions,
         completion_criteria=request.completion_criteria,
         goal_coverage_threshold=request.goal_coverage_threshold,
-        context_similarity_threshold=request.context_similarity_threshold,
         is_active=True,
         created_at=now,
         updated_at=now,

@@ -1,7 +1,6 @@
 """Async SQLAlchemy engine and session factory."""
 
 import os
-from typing import AsyncGenerator
 
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
@@ -16,7 +15,7 @@ from app.models import Base
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
-    connect_args={"timeout": 5},
+    connect_args={"timeout": 30},
 )
 
 
@@ -44,12 +43,3 @@ async def init_db() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency that yields an async database session."""
-    async with async_session_factory() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise

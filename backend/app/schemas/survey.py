@@ -15,7 +15,6 @@ class CreateSurveyRequest(BaseModel):
     max_questions: int = 10
     completion_criteria: str = ""
     goal_coverage_threshold: float = 0.85
-    context_similarity_threshold: float = 0.7
 
 
 class UpdateSurveyRequest(BaseModel):
@@ -28,7 +27,6 @@ class UpdateSurveyRequest(BaseModel):
     max_questions: Optional[int] = None
     completion_criteria: Optional[str] = None
     goal_coverage_threshold: Optional[float] = None
-    context_similarity_threshold: Optional[float] = None
 
 
 class SurveyResponse(BaseModel):
@@ -42,7 +40,6 @@ class SurveyResponse(BaseModel):
     max_questions: int
     completion_criteria: str
     goal_coverage_threshold: float
-    context_similarity_threshold: float
     is_active: bool
     created_at: str
     updated_at: str

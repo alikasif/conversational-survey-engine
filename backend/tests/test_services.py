@@ -199,7 +199,6 @@ async def _setup_active_session(db_session: AsyncSession):
         max_questions=5,
         completion_criteria="",
         goal_coverage_threshold=0.85,
-        context_similarity_threshold=0.7,
         is_active=True,
         created_at=now,
         updated_at=now,

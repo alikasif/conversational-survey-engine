@@ -63,12 +63,12 @@ export default function SurveyDetail() {
   if (error || !survey) {
     return (
       <div className="text-center py-12">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 mb-4">
           <span className="text-2xl">⚠️</span>
         </div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Failed to load survey</h2>
-        <p className="text-gray-500 mb-4">{error || 'Survey not found'}</p>
-        <Link to="/admin" className="text-indigo-600 hover:text-indigo-800 font-medium text-sm">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Failed to load survey</h2>
+        <p className="text-gray-500 dark:text-gray-400 mb-4">{error || 'Survey not found'}</p>
+        <Link to="/admin" className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium text-sm transition-colors">
           ← Back to Dashboard
         </Link>
       </div>
@@ -79,15 +79,15 @@ export default function SurveyDetail() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <Link to="/admin" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+        <Link to="/admin" className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium transition-colors">
           ← Back to Dashboard
         </Link>
         <div className="mt-4 flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{survey.title}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{survey.title}</h1>
             <span
               className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                survey.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                survey.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
               }`}
             >
               {survey.is_active ? 'Active' : 'Inactive'}
@@ -95,7 +95,7 @@ export default function SurveyDetail() {
           </div>
           <button
             onClick={handleDelete}
-            className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100"
+            className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
           >
             Delete Survey
           </button>
@@ -103,17 +103,17 @@ export default function SurveyDetail() {
       </div>
 
       {/* Share Link */}
-      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-indigo-900 mb-2">Participant Link</h3>
+      <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4 transition-colors">
+        <h3 className="text-sm font-medium text-indigo-900 dark:text-indigo-300 mb-2">Participant Link</h3>
         <div className="flex items-center gap-3">
           <input
             readOnly
             value={participantLink}
-            className="flex-1 bg-white border border-indigo-200 rounded-md px-3 py-2 text-sm text-gray-700 select-all"
+            className="flex-1 bg-white dark:bg-gray-700 border border-indigo-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm text-gray-700 dark:text-gray-200 select-all transition-colors"
           />
           <button
             onClick={copyLink}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 whitespace-nowrap"
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 whitespace-nowrap transition-colors"
           >
             {copiedLink ? 'Copied!' : 'Copy Link'}
           </button>
@@ -134,30 +134,30 @@ export default function SurveyDetail() {
       </div>
 
       {/* Survey Config */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Survey Configuration</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/20 border border-gray-200 dark:border-gray-700 p-6 transition-colors">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Survey Configuration</h2>
         <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
           <div>
-            <dt className="text-sm font-medium text-gray-500">Goal</dt>
-            <dd className="mt-1 text-sm text-gray-900">{survey.goal}</dd>
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Goal</dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{survey.goal}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">Context</dt>
-            <dd className="mt-1 text-sm text-gray-900">{survey.context}</dd>
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Context</dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{survey.context}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">Max Questions</dt>
-            <dd className="mt-1 text-sm text-gray-900">{survey.max_questions}</dd>
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Max Questions</dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{survey.max_questions}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">Completion Criteria</dt>
-            <dd className="mt-1 text-sm text-gray-900">{survey.completion_criteria || '—'}</dd>
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Completion Criteria</dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{survey.completion_criteria || '—'}</dd>
           </div>
           {survey.constraints.length > 0 && (
             <div className="md:col-span-2">
-              <dt className="text-sm font-medium text-gray-500">Constraints</dt>
+              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Constraints</dt>
               <dd className="mt-1">
-                <ul className="list-disc list-inside text-sm text-gray-900 space-y-1">
+                <ul className="list-disc list-inside text-sm text-gray-900 dark:text-gray-200 space-y-1">
                   {survey.constraints.map((c, i) => (
                     <li key={i}>{c}</li>
                   ))}
@@ -166,23 +166,23 @@ export default function SurveyDetail() {
             </div>
           )}
           <div>
-            <dt className="text-sm font-medium text-gray-500">Goal Coverage Threshold</dt>
-            <dd className="mt-1 text-sm text-gray-900">{(survey.goal_coverage_threshold * 100).toFixed(0)}%</dd>
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Goal Coverage Threshold</dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{(survey.goal_coverage_threshold * 100).toFixed(0)}%</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">Context Similarity Threshold</dt>
-            <dd className="mt-1 text-sm text-gray-900">{(survey.context_similarity_threshold * 100).toFixed(0)}%</dd>
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Context Similarity Threshold</dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{(survey.context_similarity_threshold * 100).toFixed(0)}%</dd>
           </div>
         </dl>
       </div>
 
       {/* Top Themes */}
       {stats?.top_themes && stats.top_themes.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Themes</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/20 border border-gray-200 dark:border-gray-700 p-6 transition-colors">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Themes</h2>
           <div className="flex flex-wrap gap-2">
             {stats.top_themes.map((theme, i) => (
-              <span key={i} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-50 text-indigo-700">
+              <span key={i} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
                 {theme}
               </span>
             ))}
@@ -191,52 +191,52 @@ export default function SurveyDetail() {
       )}
 
       {/* Sessions */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Sessions</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/20 border border-gray-200 dark:border-gray-700 transition-colors">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Sessions</h2>
         </div>
         {sessions.length === 0 ? (
           <div className="px-6 py-12 text-center">
-            <p className="text-gray-500">No sessions yet. Share the participant link to start collecting responses.</p>
+            <p className="text-gray-500 dark:text-gray-400">No sessions yet. Share the participant link to start collecting responses.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Questions</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Session ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Questions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Started</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Completed</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {sessions.map(session => (
-                  <tr key={session.session_id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">
+                  <tr key={session.session_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-300">
                       {session.session_id.slice(0, 8)}…
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                           session.status === 'completed'
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                             : session.status === 'active'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-600'
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                         }`}
                       >
                         {session.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {session.question_count}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {new Date(session.created_at).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {session.completed_at ? new Date(session.completed_at).toLocaleString() : '—'}
                     </td>
                   </tr>

@@ -1,35 +1,31 @@
 # Project Name: conversational_survey_engine
 
-## Branch: `feature/llm-validator`
+## Branch: `chore/arch-cleanup`
 
 ---
 
-## 1. Overview — LLM-Based Validator
+## 1. Overview — Architecture Cleanup
 
 ### Problem
-The validator currently uses embedding-based cosine similarity for 4 semantic checks (redundancy, goal alignment, context relevance, topic drift) plus a goal coverage estimator. This requires N+9 embedding API calls per validation (up to 18 at question 10), is semantically shallow, and the embedding auth setup has been problematic (Vertex AI OAuth vs API key issues).
+An architecture review found 6 issues: duplicate `get_db`, dual config loading (`load_dotenv` + Pydantic Settings), dead config/columns from the embedding era, duplicate health route, and an inline import.
 
 ### Solution
-Replace all embedding-based checks with **a single LLM call** per validation. The LLM receives the full context (candidate question, survey goal, survey context, conversation history) and returns structured JSON with pass/fail for each criterion. Goal coverage estimation also moves to a separate LLM call.
+Surgical cleanup across backend files. All changes are deletions or simplifications — no new features.
 
 ### What stays the same
-- Rule-based checks: compound question (regex), leading question (regex), max questions (integer)
-- Generator agent interface: `validator.validate()` signature unchanged
-- API contracts: zero changes
-- Frontend: zero changes
+- All API endpoints and their behavior
+- All LLM agent logic (generator + validator)
+- Frontend — zero changes
+- Database data — no migration (column removal is model-only for now)
 
-### Key design decisions
-1. **One combined LLM call** for 4 validation checks (not 4 separate calls)
-2. **Separate LLM call** for goal coverage (runs at different time in pipeline)
-3. **Fast/cheap model** for validation (Flash-tier), different from generator model
-4. **Structured JSON output** with pass/fail per criterion + reasons
-5. **Graceful fallback**: if LLM call fails, assume valid (same as current embedding error handling)
-
-### Tech Stack
-- **Backend:** Python 3.11+, FastAPI, OpenAI Agent SDK, LiteLLM, Gemini
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS (no changes)
-- **Database:** SQLite (no changes)
-- **Testing:** pytest + httpx (backend)
+### Fixes
+1. Delete duplicate `get_db` from `database.py` (keep in `dependencies.py`)
+2. Remove `load_dotenv`/`os.getenv` from agent files, use `settings` exclusively
+3. Remove dead `context_similarity_threshold` from model, schemas, API helpers
+4. Remove dead `question_embedding` from Response model
+5. Remove dead `GEMINI_EMBEDDING_MODEL` from config
+6. Remove health router duplicate from `api_router`
+7. Move inline import to top of `question_service.py`
 
 ---
 
@@ -37,101 +33,58 @@ Replace all embedding-based checks with **a single LLM call** per validation. Th
 
 | File | Change Type |
 |------|------------|
-| `backend/app/agents/validator.py` | **Major rewrite.** Remove embedding functions, replace 4 semantic checks with single `validate_with_llm()`, replace `estimate_goal_coverage()` with LLM-based version. Keep rule-based checks. |
-| `backend/app/agents/prompts.py` | Add `VALIDATOR_SYSTEM_PROMPT`, `build_validator_prompt()`, `COVERAGE_SYSTEM_PROMPT`, `build_coverage_prompt()` |
-| `backend/app/core/config.py` | Add `GEMINI_VALIDATOR_MODEL` setting |
-| `backend/.env` | Add `GEMINI_VALIDATOR_MODEL` env var |
-| `backend/tests/test_validator.py` | Rewrite embedding-mocking tests to LLM-mocking tests. Add error handling tests. |
-| `backend/tests/test_generator_agent.py` | No changes — already mocks `validate()` at class level |
-| `backend/tests/test_services.py` | Minimal — update mock path if needed |
+| `backend/app/core/database.py` | Remove duplicate `get_db()` function |
+| `backend/app/agents/validator.py` | Remove `load_dotenv` import and call |
+| `backend/app/agents/generator_agent.py` | Remove `load_dotenv`, `os.getenv`; use `settings` for model config |
+| `backend/app/core/config.py` | Remove `GEMINI_EMBEDDING_MODEL` |
+| `backend/app/models/survey.py` | Remove `context_similarity_threshold` column |
+| `backend/app/models/response.py` | Remove `question_embedding` column |
+| `backend/app/schemas/survey.py` | Remove `context_similarity_threshold` from all schemas |
+| `backend/app/api/admin.py` | Remove `context_similarity_threshold` from `_survey_to_response` |
+| `backend/app/services/survey_service.py` | Remove `context_similarity_threshold` from `create_survey` |
+| `backend/app/api/router.py` | Remove health_router import and include |
+| `backend/app/services/question_service.py` | Move inline `survey_repo` import to top |
 
 ---
 
 ## 3. Detailed Changes
 
-### 3.1 — validator.py: Replace Embedding Checks with Single LLM Call
+### Fix 1 — Delete duplicate `get_db` from database.py
+Remove the `get_db()` function and its `AsyncGenerator` import from `backend/app/core/database.py`. The canonical version lives in `dependencies.py`.
 
-**Remove:**
-- `cosine_similarity()` function
-- `get_embedding()` function
-- `check_redundancy()` method
-- `check_goal_alignment()` method
-- `check_context_relevance()` method
-- `check_topic_drift()` method
-- All threshold parameters from `__init__` (redundancy, goal_alignment, context_similarity, topic_drift)
+### Fix 2 — Remove `load_dotenv`/`os.getenv`, use `settings` only
+- `validator.py`: Remove `from dotenv import load_dotenv` and `load_dotenv(override=True)`.
+- `generator_agent.py`: Remove `from dotenv import load_dotenv`, `load_dotenv(override=True)`, and `import os`. Rewrite `get_model()` to use `settings.GEMINI_MODEL` and `settings.effective_api_key` instead of `os.getenv()`.
 
-**Add:**
-- `validate_with_llm(candidate_question, survey, conversation_history)` — single `litellm.acompletion()` call that evaluates all 4 criteria. Returns `(is_valid, rejection_reason)`.
-- `estimate_goal_coverage(conversation_history, goal)` — LLM-based replacement returning float 0.0–1.0.
-- `_get_validator_model()` — helper to get model name from env.
+### Fix 3 — Remove dead `context_similarity_threshold`
+- `models/survey.py`: Remove the `context_similarity_threshold` Column.
+- `schemas/survey.py`: Remove from `CreateSurveyRequest`, `UpdateSurveyRequest`, `SurveyResponse`.
+- `api/admin.py`: Remove from `_survey_to_response()`.
+- `services/survey_service.py`: Remove from `create_survey()`.
 
-**Update `validate()` flow:**
-```
-1. check_compound_question()   ← rule-based, keep
-2. check_leading_question()    ← rule-based, keep
-3. validate_with_llm()         ← NEW: replaces all 4 embedding checks
-```
+### Fix 4 — Remove dead `question_embedding`
+- `models/response.py`: Remove the `question_embedding` Column.
 
-**LLM response JSON schema:**
-```json
-{
-  "redundancy": {"pass": true, "reason": null},
-  "goal_alignment": {"pass": true, "reason": null},
-  "context_relevance": {"pass": true, "reason": null},
-  "topic_drift": {"pass": true, "reason": null}
-}
-```
+### Fix 5 — Remove dead `GEMINI_EMBEDDING_MODEL`
+- `core/config.py`: Remove `GEMINI_EMBEDDING_MODEL` line.
 
-### 3.2 — prompts.py: Add Validator Prompts
+### Fix 6 — Remove health router from api_router
+- `api/router.py`: Remove `health_router` import and `api_router.include_router(health_router)`. Health is already mounted directly in `main.py`.
 
-**`VALIDATOR_SYSTEM_PROMPT`** — instructs LLM to evaluate 4 criteria and return structured JSON.
-
-**`build_validator_prompt(candidate, goal, context, history)`** — assembles the validation context.
-
-**`COVERAGE_SYSTEM_PROMPT`** — instructs LLM to estimate goal coverage as 0.0–1.0.
-
-**`build_coverage_prompt(goal, conversation_history)`** — assembles coverage context.
-
-### 3.3 — config.py: Add Validator Model Setting
-
-Add `GEMINI_VALIDATOR_MODEL: str = "gemini/gemini-2.0-flash"` — fast model for validation.
-
-### 3.4 — Tests
-
-**Rewrite** all embedding-mocking tests to mock `litellm.acompletion`:
-- Mock returns structured JSON response objects
-- Test each validation criterion independently
-- Test combined pass/fail scenarios
-- Test JSON parse error fallback
-- Test LLM call exception fallback
-- Test goal coverage LLM estimate
-
-**Keep unchanged:** all rule-based tests (compound, leading, max_questions)
+### Fix 7 — Move inline import
+- `services/question_service.py`: Move `from app.repositories import survey_repo` from inside `process_answer()` to the top-level imports.
 
 ---
 
 ## 4. API Contract Impact
 
-**None.** Internal implementation change only. The `validate()` and `estimate_goal_coverage()` method signatures stay the same.
+**Minor:** `context_similarity_threshold` is removed from survey create/update/response schemas. This field was vestigial (unused by any logic). Frontend currently sends it in `SurveyCreator` — that field will be silently ignored by Pydantic (`extra = "ignore"` or simply missing from schema).
 
 ---
 
 ## 5. Dependencies
 
-```
-Phase 1 (independent, parallelizable):
-  Task 2: prompts.py — add validator + coverage prompts
-  Task 3: config.py + .env — add GEMINI_VALIDATOR_MODEL
-
-Phase 2 (depends on Tasks 2 & 3):
-  Task 4: validator.py — major rewrite using new prompts + config
-
-Phase 3 (depends on Task 4):
-  Task 5: test files — rewrite embedding tests to LLM mocks
-
-Phase 4 (depends on all):
-  Task 6: Reviews
-```
+All fixes are independent — they can be done in any order in a single task.
 
 ---
 
@@ -139,8 +92,7 @@ Phase 4 (depends on all):
 
 | Agent | Scope |
 |-------|-------|
-| python_coder | validator.py, prompts.py, config.py, .env |
-| python_test | test_validator.py, test_services.py |
-| backend_reviewer | Review LLM prompts, error handling, JSON parsing |
-| architecture_reviewer | Verify interface stability, no API breakage |
+| python_coder | All 7 fixes across backend files |
+| python_test | Run tests, fix any broken mocks |
+| backend_reviewer | Verify cleanup completeness |
 | github | Branch and push |

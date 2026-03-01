@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = '["http://localhost:5173"]'
     LOG_LEVEL: str = "info"
     GEMINI_MODEL: str = "vertex_ai/gemini-2.0-flash"
-    GEMINI_EMBEDDING_MODEL: str = "vertex_ai/text-embedding-004"
     GEMINI_VALIDATOR_MODEL: str = "gemini/gemini-2.0-flash"
 
     @property

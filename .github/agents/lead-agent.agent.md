@@ -30,9 +30,28 @@ You are the LEAD AGENT of a multi-agent software engineering team. You do NOT wr
    - **Include Name**: Top line of `plan.md` MUST be `# Project Name: [name]`.
    - **Git Strategy**: Define the branch name. FIRST item in plan.
    - Include modules, contracts, decisions, and GitHub details.
-2. **Write Task List**: First task MUST be "Initialize Git & Push Scaffold". Then assign specialist tasks.
+2. **Write Task List**: Create `shared/task_list.json` following the **exact schema** below. First task MUST be "Initialize Git & Push Scaffold". Then assign specialist tasks.
 3. **Present Plan to User**: Summarize the plan and task assignments.
 4. **Pause for Approval**: Wait for user to approve before spawning agents.
+
+### task_list.json Schema (MANDATORY)
+Every task in `shared/task_list.json` MUST use this exact structure:
+```json
+{
+  "id": 1,
+  "title": "Human-readable task title",
+  "assigned_to": "agent_identifier",
+  "status": "not_started",
+  "blocked_by": [],
+  "description": "Detailed task description"
+}
+```
+**Field rules:**
+- `assigned_to` (NOT `agent`): Must use **underscores**, matching Ralph's dispatch table exactly:
+  `project_structure`, `python_coder`, `java_coder`, `frontend`, `database`, `documentation`, `python_test`, `java_test`, `frontend_test`, `database_test`, `python_refactorer`, `frontend_reviewer`, `backend_reviewer`, `architecture_reviewer`, `database_reviewer`, `github`
+- `status`: Must use **underscores**: `not_started`, `in_progress`, `done`, `blocked`, `review_feedback`
+- `blocked_by`: Array of task `id` integers that must be `done` before this task can start.
+- Do NOT use hyphens in `assigned_to` or `status` values. Ralph will fail to match them.
 
 ## Phase 4: Scaffold
 
