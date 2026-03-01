@@ -2,15 +2,18 @@
 
 import json
 import logging
+import os
 from typing import List, Tuple
 
 from agents import Agent, Runner
 from agents.extensions.models.litellm_model import LitellmModel
+from dotenv import load_dotenv
 
 from app.agents.prompts import GENERATOR_SYSTEM_PROMPT, build_generator_prompt
 from app.agents.validator import QuestionValidator
-from app.core.config import settings
 from app.models.survey import Survey
+
+load_dotenv(override=True)
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +21,20 @@ FALLBACK_QUESTION = "Could you tell me more about your experience with this topi
 MAX_RETRIES = 3
 
 
+def get_model(prefix="GEMINI"):
+    """Get LitellmModel configured from environment variables."""
+    model = os.getenv(f"{prefix}_MODEL", "gemini/gemini-2.0-flash")
+    api_key = os.getenv(f"{prefix}_API_KEY")
+    logger.info(f"Creating model: {model}, api_key={'set' if api_key else 'MISSING'}")
+    return LitellmModel(model=model, api_key=api_key)
+
+
 def _create_agent() -> Agent:
     """Create the generator agent with LiteLLM model."""
     return Agent(
         name="SurveyQuestionGenerator",
         instructions=GENERATOR_SYSTEM_PROMPT,
-        model=LitellmModel(
-            model="gemini/gemini-2.0-flash",
-            api_key=settings.GEMINI_API_KEY,
-        ),
+        model=get_model("GEMINI"),
     )
 
 
@@ -41,12 +49,14 @@ def _parse_constraints(constraints_json: str) -> List[str]:
 async def generate_question(
     survey: Survey,
     conversation_history: List[Tuple[str, str]],
+    question_number: int = 1,
 ) -> str:
     """Generate a survey question using the agent with validation and retries.
 
     Args:
         survey: The survey configuration.
         conversation_history: List of (question, answer) tuples.
+        question_number: The current question number (1-based).
 
     Returns:
         The generated question text.
@@ -63,11 +73,15 @@ async def generate_question(
             constraints=constraints,
             conversation_history=conversation_history,
             rejection_feedback=rejection_feedback,
+            question_number=question_number,
+            max_questions=survey.max_questions,
         )
 
         try:
+            logger.info(f"Generating question (attempt {attempt + 1}/{MAX_RETRIES})")
             result = await Runner.run(agent, input=prompt)
             candidate = result.final_output.strip()
+            logger.info(f"Agent returned: {candidate[:100]}")
 
             if not candidate:
                 rejection_feedback = "Empty question generated."

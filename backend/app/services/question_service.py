@@ -68,13 +68,14 @@ async def generate_next_question(
             return None
 
     # Generate question
+    question_number = session.question_count + 1
     question_text = await generate_question(
         survey=survey,
         conversation_history=conversation_history,
+        question_number=question_number,
     )
 
     question_id = str(uuid.uuid4())
-    question_number = session.question_count + 1
 
     # Update session question count
     await session_repo.update_question_count(db, session, question_number)

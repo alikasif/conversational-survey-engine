@@ -3,13 +3,16 @@
 import json
 import logging
 import math
+import os
 import re
 from typing import List, Optional, Tuple
 
 import litellm
+from dotenv import load_dotenv
 
-from app.core.config import settings
 from app.models.survey import Survey
+
+load_dotenv(override=True)
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +30,12 @@ def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
 async def get_embedding(text: str) -> List[float]:
     """Get embedding vector for text using LiteLLM."""
     try:
+        model = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini/text-embedding-004")
+        api_key = os.getenv("GEMINI_API_KEY")
         response = await litellm.aembedding(
-            model="gemini/text-embedding-004",
+            model=model,
             input=[text],
-            api_key=settings.GEMINI_API_KEY,
+            api_key=api_key,
         )
         return response.data[0]["embedding"]
     except Exception as e:
@@ -44,10 +49,14 @@ class QuestionValidator:
     def __init__(
         self,
         redundancy_threshold: float = 0.85,
-        goal_alignment_threshold: float = 0.3,
+        goal_alignment_threshold: float = 0.45,
+        context_similarity_threshold: float = 0.7,
+        topic_drift_threshold: float = 0.80,
     ):
         self.redundancy_threshold = redundancy_threshold
         self.goal_alignment_threshold = goal_alignment_threshold
+        self.context_similarity_threshold = context_similarity_threshold
+        self.topic_drift_threshold = topic_drift_threshold
 
     async def validate(
         self,
@@ -88,6 +97,28 @@ class QuestionValidator:
                 return False, reason
         except Exception as e:
             logger.warning(f"Goal alignment check failed: {e}, skipping")
+
+        # Check context relevance (requires embedding)
+        context = getattr(survey, "context", None)
+        if context:
+            threshold = getattr(
+                survey,
+                "context_similarity_threshold",
+                self.context_similarity_threshold,
+            )
+            is_relevant, reason = await self.check_context_relevance(
+                candidate_question, context, threshold=threshold
+            )
+            if not is_relevant:
+                return False, reason
+
+        # Check topic drift (requires embedding)
+        if prior_questions:
+            is_drifting, reason = await self.check_topic_drift(
+                candidate_question, prior_questions
+            )
+            if is_drifting:
+                return False, reason
 
         return True, None
 
@@ -138,6 +169,68 @@ class QuestionValidator:
             logger.warning(f"Goal alignment check failed: {e}")
 
         return True, None
+
+    async def check_context_relevance(
+        self,
+        question: str,
+        context: str,
+        threshold: float = 0.7,
+    ) -> Tuple[bool, Optional[str]]:
+        """Check if question is relevant to the survey context.
+
+        Returns:
+            Tuple of (is_relevant, rejection_reason).
+        """
+        try:
+            q_embedding = await get_embedding(question)
+            c_embedding = await get_embedding(context)
+            if not q_embedding or not c_embedding:
+                return True, None  # Can't check, assume relevant
+
+            sim = cosine_similarity(q_embedding, c_embedding)
+            if sim < threshold:
+                return False, (
+                    f"Question drifts outside the survey context "
+                    f"(similarity: {sim:.2f}). Keep the question grounded "
+                    f"in the survey's subject matter."
+                )
+        except Exception as e:
+            logger.warning(f"Context relevance check failed: {e}")
+
+        return True, None
+
+    async def check_topic_drift(
+        self,
+        question: str,
+        prior_questions: List[str],
+    ) -> Tuple[bool, Optional[str]]:
+        """Check if question is too similar to the last question asked.
+
+        Returns:
+            Tuple of (is_drifting, rejection_reason).
+        """
+        if not prior_questions:
+            return False, None
+
+        try:
+            last_question = prior_questions[-1]
+            q_embedding = await get_embedding(question)
+            last_embedding = await get_embedding(last_question)
+            if not q_embedding or not last_embedding:
+                return False, None
+
+            sim = cosine_similarity(q_embedding, last_embedding)
+            if sim > self.topic_drift_threshold:
+                return True, (
+                    f"Question is too similar to the last question asked "
+                    f"(similarity: {sim:.2f}). This looks like rabbit-holing "
+                    f"into the same subtopic. Move to a different aspect of "
+                    f"the research goal."
+                )
+        except Exception as e:
+            logger.warning(f"Topic drift check failed: {e}")
+
+        return False, None
 
     def check_compound_question(
         self, question: str

@@ -4,17 +4,25 @@ from typing import List, Tuple
 
 GENERATOR_SYSTEM_PROMPT = """You are an expert survey researcher and conversational interviewer.
 
-Your role is to generate exactly ONE focused, open-ended survey question based on the provided context, goal, and conversation history.
+Your role is to generate exactly ONE focused, open-ended survey question that collects actionable insights for the stated research goal.
 
 Rules:
 1. Generate exactly ONE question — never multiple questions.
 2. Do NOT ask compound questions (no "and" joining two separate inquiries).
 3. Do NOT ask leading questions that suggest a particular answer.
 4. Stay strictly within the survey context — do not drift to unrelated topics.
-5. Build on previous answers to go deeper, but do not repeat questions already asked.
+5. Reference previous answers to show you listened, but do NOT drill deeper into the same subtopic. Prioritise covering different facets of the research goal over probing a single thread.
 6. Keep questions conversational and natural.
 7. If constraints are provided, respect them absolutely.
 8. Return ONLY the question text — no numbering, no prefixes, no explanation.
+
+Anti-rabbit-hole guidelines (CRITICAL):
+- Your primary mission is INSIGHT COLLECTION for the research goal, not an in-depth discussion on any single topic.
+- After receiving an answer, move to a NEW aspect of the research goal rather than asking successive follow-ups on the same subtopic.
+- Do NOT ask "why" or "how" about the same subtopic more than once. One clarification is enough — then move on.
+- If the participant's answer already provides a clear insight, acknowledge it implicitly and pivot to an uncovered area of the goal.
+- Think of the survey as a breadth-first exploration of the research goal, not a depth-first deep dive.
+- Each question should independently contribute a new data point toward the research goal.
 """
 
 
@@ -24,6 +32,8 @@ def build_generator_prompt(
     constraints: List[str],
     conversation_history: List[Tuple[str, str]],
     rejection_feedback: str = "",
+    question_number: int = 1,
+    max_questions: int = 10,
 ) -> str:
     """Build the full prompt for the generator agent.
 
@@ -34,6 +44,8 @@ def build_generator_prompt(
         conversation_history: List of (question, answer) tuples.
         rejection_feedback: Optional feedback from validator on why the previous
             question was rejected.
+        question_number: The current question number (1-based).
+        max_questions: The maximum number of questions in the survey.
 
     Returns:
         The formatted prompt string.
@@ -42,6 +54,13 @@ def build_generator_prompt(
 
     parts.append(f"## Survey Context\n{survey_context}")
     parts.append(f"## Research Goal\n{goal}")
+
+    remaining = max_questions - question_number + 1
+    parts.append(
+        f"## Survey Progress\n"
+        f"This is question {question_number} of {max_questions} ({remaining} remaining including this one).\n"
+        f"Prioritise breadth: make sure different aspects of the research goal are covered across the remaining questions."
+    )
 
     if constraints:
         constraints_text = "\n".join(f"- {c}" for c in constraints)
@@ -52,6 +71,12 @@ def build_generator_prompt(
         for i, (q, a) in enumerate(conversation_history, 1):
             history_text += f"Q{i}: {q}\nA{i}: {a}\n\n"
         parts.append(f"## Conversation So Far\n{history_text.strip()}")
+        parts.append(
+            "## Important: Topics Already Explored\n"
+            "Review the conversation above. Do NOT ask another question on the same subtopic "
+            "as the most recent exchange. Move to a different aspect of the research goal that "
+            "has NOT been covered yet."
+        )
     else:
         parts.append("## Conversation So Far\nThis is the first question. Start by exploring the main topic.")
 
@@ -62,6 +87,10 @@ def build_generator_prompt(
             f"Generate a different question that avoids this issue."
         )
 
-    parts.append("## Task\nGenerate exactly one focused survey question.")
+    parts.append(
+        "## Task\n"
+        "Generate exactly one focused survey question that collects a NEW insight "
+        "for the research goal. Do not revisit topics already discussed."
+    )
 
     return "\n\n".join(parts)

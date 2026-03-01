@@ -203,6 +203,7 @@ async def test_validate_passes_good_question(validator):
     class FakeSurvey:
         goal = "Understand employee satisfaction"
         constraints = "[]"
+        context = "Employee well-being study"
         context_similarity_threshold = 0.7
 
     with patch(
@@ -226,6 +227,7 @@ async def test_validate_rejects_compound(validator):
     class FakeSurvey:
         goal = "Understand employee satisfaction"
         constraints = "[]"
+        context = "Employee well-being study"
         context_similarity_threshold = 0.7
 
     is_valid, reason = await validator.validate(
@@ -235,3 +237,79 @@ async def test_validate_rejects_compound(validator):
     )
     assert is_valid is False
     assert "compound" in reason.lower()
+
+
+# ---------------------------------------------------------------------------
+# Context-relevance check (embedding mocked)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_check_context_relevance_passes(validator):
+    """Question relevant to the survey context passes the check."""
+    with patch(
+        "app.agents.validator.get_embedding",
+        new_callable=AsyncMock,
+        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_A],
+    ):
+        is_relevant, reason = await validator.check_context_relevance(
+            "How satisfied are you with remote work?",
+            "Employee well-being study",
+            threshold=0.7,
+        )
+    assert is_relevant is True
+    assert reason is None
+
+
+@pytest.mark.asyncio
+async def test_check_context_relevance_fails(validator):
+    """Question irrelevant to the survey context is rejected."""
+    with patch(
+        "app.agents.validator.get_embedding",
+        new_callable=AsyncMock,
+        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_C],
+    ):
+        is_relevant, reason = await validator.check_context_relevance(
+            "What is your favourite colour?",
+            "Employee well-being study",
+            threshold=0.7,
+        )
+    assert is_relevant is False
+    assert "context" in reason.lower()
+
+
+# ---------------------------------------------------------------------------
+# Topic drift check (embedding mocked)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_check_topic_drift_detects_rabbit_hole(validator):
+    """A question too similar to the last one is flagged as topic drift."""
+    with patch(
+        "app.agents.validator.get_embedding",
+        new_callable=AsyncMock,
+        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_B],
+    ):
+        is_drifting, reason = await validator.check_topic_drift(
+            "Tell me more about remote work communication?",
+            ["How do you communicate while working remotely?"],
+        )
+    assert is_drifting is True
+    assert "rabbit-holing" in reason.lower()
+
+
+@pytest.mark.asyncio
+async def test_check_topic_drift_passes_diverse(validator):
+    """A diverse question passes the topic drift check."""
+    with patch(
+        "app.agents.validator.get_embedding",
+        new_callable=AsyncMock,
+        side_effect=[MOCK_EMBEDDING_A, MOCK_EMBEDDING_C],
+    ):
+        is_drifting, reason = await validator.check_topic_drift(
+            "What tools help you stay productive?",
+            ["How do you communicate while working remotely?"],
+        )
+    assert is_drifting is False
+    assert reason is None

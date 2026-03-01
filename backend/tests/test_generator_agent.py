@@ -86,6 +86,8 @@ async def test_generate_question_with_history():
     call_kwargs = mock_run.call_args
     prompt_text = call_kwargs.kwargs.get("input") or call_kwargs.args[1]
     assert "Collaboration can be hard" in prompt_text
+    # Anti-rabbit-hole: prompt should include survey progress section
+    assert "Survey Progress" in prompt_text
 
 
 @pytest.mark.asyncio
