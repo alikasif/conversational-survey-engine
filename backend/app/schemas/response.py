@@ -1,16 +1,18 @@
 """Response Pydantic schemas."""
 
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StringConstraints
 
 from app.schemas.session import SessionDetailResponse
+
+StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True)]
 
 
 class SubmitAnswerRequest(BaseModel):
     """Request schema for submitting an answer."""
 
-    answer: str
+    answer: StrippedStr = Field(min_length=1, max_length=2000)
     question_id: Optional[str] = None
     question_text: Optional[str] = None
 

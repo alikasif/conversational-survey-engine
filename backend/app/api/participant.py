@@ -1,5 +1,6 @@
 """Participant API endpoints for survey sessions."""
 
+import time
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,6 +19,31 @@ from app.schemas.session import (
 from app.services import question_service, session_service
 
 router = APIRouter(prefix="/surveys", tags=["participant"])
+
+# ---------------------------------------------------------------------------
+# Per-session rate limiting (in-memory)
+# ---------------------------------------------------------------------------
+_rate_limit_tracker: dict[str, float] = {}
+RATE_LIMIT_SECONDS = 2.0
+
+
+def check_rate_limit(session_id: str) -> None:
+    """Raise HTTP 429 if the same session submits faster than the threshold."""
+    now = time.monotonic()
+    last = _rate_limit_tracker.get(session_id)
+    if last is not None and (now - last) < RATE_LIMIT_SECONDS:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests. Please wait before submitting another answer.",
+        )
+    _rate_limit_tracker[session_id] = now
+
+    # Periodic cleanup — keep tracker from growing unbounded
+    if len(_rate_limit_tracker) > 1000:
+        cutoff = now - 60.0
+        stale = [k for k, v in _rate_limit_tracker.items() if v < cutoff]
+        for k in stale:
+            del _rate_limit_tracker[k]
 
 
 @router.post(
@@ -48,6 +74,9 @@ async def submit_answer(
     db: AsyncSession = Depends(get_db),
 ):
     """Submit an answer and get the next question or completion."""
+    # Rate-limit check
+    check_rate_limit(session_id)
+
     # Verify session exists and is active
     session = await session_repo.get_by_id(db, session_id)
     if not session:

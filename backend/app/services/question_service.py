@@ -8,6 +8,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.generator_agent import generate_question
+from app.agents.answer_guardrails import check_answer, flags_to_json
 from app.agents.validator import QuestionValidator
 from app.models.response import Response
 from app.models.session import Session
@@ -24,6 +25,7 @@ async def generate_next_question(
     session: Session,
     survey: Survey,
     db: AsyncSession,
+    rejection_guardrail_hint: str | None = None,
 ) -> Optional[QuestionPayload]:
     """Generate the next question for a session.
 
@@ -73,6 +75,7 @@ async def generate_next_question(
         survey=survey,
         conversation_history=conversation_history,
         question_number=question_number,
+        rejection_guardrail_hint=rejection_guardrail_hint,
     )
 
     question_id = str(uuid.uuid4())
@@ -119,7 +122,10 @@ async def process_answer(
 
     now = datetime.now(timezone.utc).isoformat()
 
-    # Store the response
+    # --- Guardrail check ---
+    guardrail_result = check_answer(answer)
+
+    # Store the response (always — never reject)
     response = Response(
         id=str(uuid.uuid4()),
         session_id=session_id,
@@ -129,13 +135,17 @@ async def process_answer(
         question_text=question_text,
         answer_text=answer,
         question_number=question_number,
+        answer_flags=flags_to_json(guardrail_result.flags),
         created_at=now,
     )
     await response_repo.create(db, response)
 
     # Generate next question (handles stopping conditions internally)
     next_question = await generate_next_question(
-        session=session, survey=survey, db=db
+        session=session,
+        survey=survey,
+        db=db,
+        rejection_guardrail_hint=guardrail_result.rejection_hint,
     )
 
     if next_question is None:

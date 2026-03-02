@@ -19,6 +19,7 @@ class Response(Base):
     question_text = Column(Text, nullable=False)
     answer_text = Column(Text, nullable=False)
     question_number = Column(Integer, nullable=False)
+    answer_flags = Column(Text, nullable=True)
     created_at = Column(Text, nullable=False)
 
     session = relationship("Session", back_populates="responses")

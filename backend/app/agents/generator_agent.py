@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from typing import List, Tuple
 
 from agents import Agent, Runner
@@ -16,6 +17,36 @@ logger = logging.getLogger(__name__)
 
 FALLBACK_QUESTION = "Could you tell me more about your experience with this topic?"
 MAX_RETRIES = 3
+
+# Output-guard patterns — detect system info leaking into generated questions
+OUTPUT_LEAK_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(p, re.IGNORECASE)
+    for p in [
+        r"system\s*prompt",
+        r"\bgemini\b",
+        r"\blitellm\b",
+        r"\bopenai\b",
+        r"\bvertex[_\s]?ai\b",
+        r"you\s+are\s+an\s+expert\s+survey",
+        r"GENERATOR_SYSTEM_PROMPT",
+        r"VALIDATOR_SYSTEM_PROMPT",
+        r"COVERAGE_SYSTEM_PROMPT",
+        re.escape(settings.GEMINI_MODEL),
+    ]
+]
+
+
+def _check_output_leakage(question: str) -> bool:
+    """Return *True* if *question* contains leaked system information."""
+    for pattern in OUTPUT_LEAK_PATTERNS:
+        if pattern.search(question):
+            logger.warning(
+                "Output guard triggered (pattern=%s): %s",
+                pattern.pattern,
+                question[:120],
+            )
+            return True
+    return False
 
 
 def get_model(prefix="GEMINI"):
@@ -47,6 +78,7 @@ async def generate_question(
     survey: Survey,
     conversation_history: List[Tuple[str, str]],
     question_number: int = 1,
+    rejection_guardrail_hint: str | None = None,
 ) -> str:
     """Generate a survey question using the agent with validation and retries.
 
@@ -72,6 +104,7 @@ async def generate_question(
             rejection_feedback=rejection_feedback,
             question_number=question_number,
             max_questions=survey.max_questions,
+            rejection_guardrail_hint=rejection_guardrail_hint,
         )
 
         try:
@@ -82,6 +115,14 @@ async def generate_question(
 
             if not candidate:
                 rejection_feedback = "Empty question generated."
+                continue
+
+            # Output guard — check for leaked system information
+            if _check_output_leakage(candidate):
+                rejection_feedback = (
+                    "Question contained system information. "
+                    "Generate a different question about the survey topic."
+                )
                 continue
 
             # Validate the candidate question
