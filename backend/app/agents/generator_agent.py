@@ -4,11 +4,16 @@ import json
 import logging
 import re
 from typing import List, Tuple
+from uuid import uuid4
 
 from agents import Agent, Runner
 from agents.extensions.models.litellm_model import LitellmModel
 
-from app.agents.prompts import GENERATOR_SYSTEM_PROMPT, build_generator_prompt
+from app.agents.prompts import (
+    GENERATOR_SYSTEM_PROMPT,
+    build_generator_prompt,
+    build_preset_generation_prompt,
+)
 from app.agents.validator import QuestionValidator
 from app.core.config import settings
 from app.models.survey import Survey
@@ -149,3 +154,104 @@ async def generate_question(
 
     logger.warning("All retries exhausted, using fallback question.")
     return FALLBACK_QUESTION
+
+
+async def generate_preset_question_set(
+    survey: Survey, count: int
+) -> List[dict]:
+    """Generate a fixed set of preset questions for a survey.
+
+    Iteratively generates questions using build_preset_generation_prompt,
+    validates each one, and collects them into a list.
+
+    Args:
+        survey: The survey configuration.
+        count: Number of questions to generate.
+
+    Returns:
+        List of dicts with keys: question_number, question_id, text.
+    """
+    agent = _create_agent()
+    constraints = _parse_constraints(survey.constraints)
+    validator = QuestionValidator()
+    generated_so_far: List[dict] = []
+
+    for i in range(1, count + 1):
+        question_text = None
+
+        for attempt in range(MAX_RETRIES):
+            prompt = build_preset_generation_prompt(
+                survey_context=survey.context,
+                goal=survey.goal,
+                constraints=constraints,
+                generated_so_far=generated_so_far,
+                question_number=i,
+                max_questions=count,
+            )
+
+            try:
+                logger.info(
+                    f"Generating preset question {i}/{count} "
+                    f"(attempt {attempt + 1}/{MAX_RETRIES})"
+                )
+                result = await Runner.run(agent, input=prompt)
+                candidate = result.final_output.strip()
+
+                if not candidate:
+                    logger.warning("Empty question generated for preset.")
+                    continue
+
+                if _check_output_leakage(candidate):
+                    logger.warning("Output guard triggered during preset generation.")
+                    continue
+
+                # Build synthetic history for validator
+                synthetic_history: List[Tuple[str, str]] = [
+                    (q["text"], "[Not yet answered]") for q in generated_so_far
+                ]
+
+                # Rule-based checks
+                is_compound, _ = validator.check_compound_question(candidate)
+                if is_compound:
+                    logger.warning(f"Preset Q{i} rejected: compound question.")
+                    continue
+
+                is_leading, _ = validator.check_leading_question(candidate)
+                if is_leading:
+                    logger.warning(f"Preset Q{i} rejected: leading question.")
+                    continue
+
+                # LLM-based validation
+                is_valid, reason = await validator.validate_with_llm(
+                    candidate, survey, synthetic_history
+                )
+                if not is_valid:
+                    logger.warning(
+                        f"Preset Q{i} rejected by LLM validator: {reason}"
+                    )
+                    continue
+
+                question_text = candidate
+                break
+
+            except Exception as e:
+                logger.error(
+                    f"Error generating preset question {i} "
+                    f"(attempt {attempt + 1}): {e}"
+                )
+
+        if question_text is None:
+            question_text = FALLBACK_QUESTION
+            logger.warning(
+                f"Using fallback for preset question {i} after exhausting retries."
+            )
+
+        generated_so_far.append(
+            {
+                "question_number": i,
+                "question_id": str(uuid4()),
+                "text": question_text,
+            }
+        )
+
+    return generated_so_far

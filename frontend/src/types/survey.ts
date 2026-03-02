@@ -1,5 +1,11 @@
 /** Survey-related TypeScript interfaces matching the API contract. */
 
+export interface PresetQuestion {
+  question_number: number;
+  question_id: string;
+  text: string;
+}
+
 export interface CreateSurveyRequest {
   title: string;
   context: string;
@@ -9,6 +15,7 @@ export interface CreateSurveyRequest {
   completion_criteria: string;
   goal_coverage_threshold?: number;
   context_similarity_threshold?: number;
+  question_mode?: 'preset' | 'dynamic';
 }
 
 export interface UpdateSurveyRequest {
@@ -20,6 +27,7 @@ export interface UpdateSurveyRequest {
   completion_criteria?: string;
   goal_coverage_threshold?: number;
   context_similarity_threshold?: number;
+  question_mode?: 'preset' | 'dynamic';
 }
 
 export interface SurveyResponse {
@@ -32,6 +40,9 @@ export interface SurveyResponse {
   completion_criteria: string;
   goal_coverage_threshold: number;
   context_similarity_threshold: number;
+  question_mode: 'preset' | 'dynamic';
+  preset_questions?: PresetQuestion[];
+  preset_generated_at?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;

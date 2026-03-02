@@ -86,15 +86,26 @@ export default function AdminDashboard() {
               <div className="p-6">
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white line-clamp-1">{survey.title}</h3>
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      survey.is_active
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                    }`}
-                  >
-                    {survey.is_active ? 'Active' : 'Inactive'}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        survey.question_mode === 'preset'
+                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                          : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      }`}
+                    >
+                      {survey.question_mode === 'preset' ? 'Preset' : 'Dynamic'}
+                    </span>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        survey.is_active
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                      }`}
+                    >
+                      {survey.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-4">{survey.goal}</p>
                 <div className="flex items-center text-xs text-gray-400 dark:text-gray-500 space-x-4">

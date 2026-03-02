@@ -1,14 +1,17 @@
 """Admin API endpoints for survey management."""
 
 import json
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db
 from app.schemas.response import ResponseListResponse
 from app.schemas.survey import (
     CreateSurveyRequest,
+    PresetQuestion,
     SurveyDetailResponse,
     SurveyListResponse,
     SurveyResponse,
@@ -28,6 +31,14 @@ def _survey_to_response(survey) -> SurveyResponse:
             constraints = json.loads(constraints)
         except (json.JSONDecodeError, TypeError):
             constraints = []
+
+    preset_questions = None
+    if survey.preset_questions:
+        try:
+            preset_questions = json.loads(survey.preset_questions)
+        except (json.JSONDecodeError, TypeError):
+            preset_questions = None
+
     return SurveyResponse(
         id=survey.id,
         title=survey.title,
@@ -37,6 +48,9 @@ def _survey_to_response(survey) -> SurveyResponse:
         max_questions=survey.max_questions,
         completion_criteria=survey.completion_criteria,
         goal_coverage_threshold=survey.goal_coverage_threshold,
+        question_mode=survey.question_mode,
+        preset_questions=preset_questions,
+        preset_generated_at=survey.preset_generated_at,
         is_active=survey.is_active,
         created_at=survey.created_at,
         updated_at=survey.updated_at,
@@ -147,3 +161,55 @@ async def get_survey_stats(
     if not stats:
         raise HTTPException(status_code=404, detail="Survey not found")
     return SurveyStatsResponse(**stats)
+
+
+@router.post("/{survey_id}/generate-questions")
+async def generate_preset_questions(
+    survey_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger preset question generation for a survey.
+
+    Only works for surveys with question_mode='preset'.
+    May take 30-60s for many questions.
+    """
+    try:
+        questions = await survey_service.generate_preset_questions(survey_id, db)
+    except ValueError as e:
+        msg = str(e)
+        if "not found" in msg.lower():
+            raise HTTPException(status_code=404, detail=msg)
+        raise HTTPException(status_code=400, detail=msg)
+
+    return {
+        "questions": questions,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+class UpdatePresetQuestionsRequest(BaseModel):
+    """Request body for updating preset questions."""
+
+    questions: list[PresetQuestion]
+
+
+@router.put("/{survey_id}/preset-questions")
+async def update_preset_questions(
+    survey_id: str,
+    request: UpdatePresetQuestionsRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually set or update the preset questions for a survey."""
+    try:
+        await survey_service.update_preset_questions(
+            survey_id,
+            [q.model_dump() for q in request.questions],
+            db,
+        )
+    except ValueError as e:
+        msg = str(e)
+        if "not found" in msg.lower():
+            raise HTTPException(status_code=404, detail=msg)
+        raise HTTPException(status_code=400, detail=msg)
+
+    return {"status": "updated"}

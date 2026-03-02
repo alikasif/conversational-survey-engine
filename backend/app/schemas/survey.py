@@ -1,8 +1,16 @@
 """Survey Pydantic schemas."""
 
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
+
+
+class PresetQuestion(BaseModel):
+    """Schema for a single preset question."""
+
+    question_number: int
+    question_id: str
+    text: str
 
 
 class CreateSurveyRequest(BaseModel):
@@ -15,6 +23,7 @@ class CreateSurveyRequest(BaseModel):
     max_questions: int = 10
     completion_criteria: str = ""
     goal_coverage_threshold: float = 0.85
+    question_mode: Literal["preset", "dynamic"] = "dynamic"
 
 
 class UpdateSurveyRequest(BaseModel):
@@ -27,6 +36,7 @@ class UpdateSurveyRequest(BaseModel):
     max_questions: Optional[int] = None
     completion_criteria: Optional[str] = None
     goal_coverage_threshold: Optional[float] = None
+    question_mode: Optional[Literal["preset", "dynamic"]] = None
 
 
 class SurveyResponse(BaseModel):
@@ -40,6 +50,9 @@ class SurveyResponse(BaseModel):
     max_questions: int
     completion_criteria: str
     goal_coverage_threshold: float
+    question_mode: str
+    preset_questions: Optional[List[PresetQuestion]] = None
+    preset_generated_at: Optional[str] = None
     is_active: bool
     created_at: str
     updated_at: str

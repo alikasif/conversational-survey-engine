@@ -32,6 +32,9 @@ export default function SurveyForm({
   const [contextSimilarity, setContextSimilarity] = useState(
     initialData?.context_similarity_threshold || 0.7
   );
+  const [questionMode, setQuestionMode] = useState<'preset' | 'dynamic'>(
+    initialData?.question_mode || 'dynamic'
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +52,7 @@ export default function SurveyForm({
       completion_criteria: completionCriteria,
       goal_coverage_threshold: goalCoverage,
       context_similarity_threshold: contextSimilarity,
+      question_mode: questionMode,
     });
   };
 
@@ -121,6 +125,55 @@ export default function SurveyForm({
           placeholder="Describe when the survey should be considered complete..."
         />
       </div>
+
+      {/* Question Mode */}
+      <fieldset>
+        <legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Question Mode
+        </legend>
+        <div className="space-y-3">
+          <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+            questionMode === 'dynamic'
+              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-400'
+              : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+          }`}>
+            <input
+              type="radio"
+              name="question_mode"
+              value="dynamic"
+              checked={questionMode === 'dynamic'}
+              onChange={() => setQuestionMode('dynamic')}
+              className="mt-0.5 h-4 w-4 text-indigo-600 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
+            />
+            <div>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Dynamic</span>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                AI generates unique questions per participant based on their responses.
+              </p>
+            </div>
+          </label>
+          <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+            questionMode === 'preset'
+              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-400'
+              : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+          }`}>
+            <input
+              type="radio"
+              name="question_mode"
+              value="preset"
+              checked={questionMode === 'preset'}
+              onChange={() => setQuestionMode('preset')}
+              className="mt-0.5 h-4 w-4 text-purple-600 focus:ring-purple-500 dark:focus:ring-offset-gray-800"
+            />
+            <div>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Preset</span>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                AI generates a fixed set of questions once — same for all participants.
+              </p>
+            </div>
+          </label>
+        </div>
+      </fieldset>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>

@@ -1,5 +1,6 @@
 """Question generation orchestration service."""
 
+import json
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -30,11 +31,15 @@ async def generate_next_question(
     """Generate the next question for a session.
 
     Core orchestration:
-    1. Check if max questions reached
-    2. Get conversation history from DB
-    3. Invoke generator agent
-    4. Return question payload
+    1. Branch by survey question_mode (preset vs dynamic)
+    2. For dynamic: check stopping conditions, generate via LLM
+    3. For preset: serve from pre-generated question list
     """
+    # Preset mode — serve from stored question list, no LLM calls
+    if survey.question_mode == "preset":
+        return await _get_next_preset_question(survey, session, db)
+
+    # Dynamic mode — existing behavior below
     # Check max questions
     if validator.check_max_questions(session.question_count, survey.max_questions):
         now = datetime.now(timezone.utc).isoformat()
@@ -86,6 +91,49 @@ async def generate_next_question(
     return QuestionPayload(
         question_id=question_id,
         text=question_text,
+        question_number=question_number,
+    )
+
+
+async def _get_next_preset_question(
+    survey: Survey, session: Session, db: AsyncSession
+) -> Optional[QuestionPayload]:
+    """Serve the next preset question from the stored list.
+
+    No LLM calls, no goal coverage check — just JSON lookup.
+
+    Returns:
+        QuestionPayload for the next question, or None if all served.
+
+    Raises:
+        ValueError: If preset questions haven't been generated yet.
+    """
+    if not survey.preset_questions:
+        raise ValueError("Preset questions not yet generated for this survey.")
+
+    questions = json.loads(survey.preset_questions)
+    current_index = session.question_count  # 0-based
+
+    if current_index >= len(questions):
+        now = datetime.now(timezone.utc).isoformat()
+        await session_repo.update_status(
+            db,
+            session,
+            status="completed",
+            completion_reason="all_preset_questions_served",
+            completed_at=now,
+        )
+        return None
+
+    preset_q = questions[current_index]
+    question_number = current_index + 1
+
+    # Update session question count
+    await session_repo.update_question_count(db, session, question_number)
+
+    return QuestionPayload(
+        question_id=preset_q.get("question_id", str(uuid.uuid4())),
+        text=preset_q["text"],
         question_number=question_number,
     )
 

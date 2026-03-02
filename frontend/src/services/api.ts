@@ -2,6 +2,7 @@
 
 import type {
   CreateSurveyRequest,
+  PresetQuestion,
   SurveyDetailResponse,
   SurveyListResponse,
   SurveyResponse,
@@ -105,6 +106,28 @@ export async function getSurveyStats(
 ): Promise<SurveyStatsResponse> {
   return request<SurveyStatsResponse>(
     `/admin/surveys/${surveyId}/stats`
+  );
+}
+
+export async function generatePresetQuestions(
+  surveyId: string
+): Promise<{ questions: PresetQuestion[]; generated_at: string }> {
+  return request<{ questions: PresetQuestion[]; generated_at: string }>(
+    `/admin/surveys/${surveyId}/generate-questions`,
+    { method: "POST" }
+  );
+}
+
+export async function updatePresetQuestions(
+  surveyId: string,
+  questions: PresetQuestion[]
+): Promise<void> {
+  return request<void>(
+    `/admin/surveys/${surveyId}/preset-questions`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ questions }),
+    }
   );
 }
 

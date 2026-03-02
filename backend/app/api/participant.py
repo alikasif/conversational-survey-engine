@@ -57,7 +57,10 @@ async def create_session(
     db: AsyncSession = Depends(get_db),
 ):
     """Start a new survey session and get the first question."""
-    result = await session_service.create_session(survey_id, request, db)
+    try:
+        result = await session_service.create_session(survey_id, request, db)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     if result is None:
         raise HTTPException(status_code=404, detail="Survey not found")
     return SessionResponse(**result)
