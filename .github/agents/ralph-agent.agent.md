@@ -124,7 +124,31 @@ Re-read `shared/task_list.json`:
 - You MUST exit the loop when all tasks are `done` — do not loop infinitely.
 - You MUST cap review round-trips at 3 per task to prevent infinite feedback loops.
 - You MUST return a structured completion report to the Lead Agent when finished.
+- You MUST read `shared/learnings.md` at the start of execution (if it exists). Use past learnings to anticipate issues when dispatching tasks.
+- You MUST append to `shared/learnings.md` if you encounter dispatch failures, deadlocks, or task dependency issues.
+- You MUST verify that subagents recorded learnings for any failures or retries — if not, record them yourself.
 </guardrails>
+
+<learnings>
+The file `shared/learnings.md` is a shared knowledge base across all agents. It captures mistakes made and lessons learned so they are never repeated.
+
+**When to write:**
+- A subagent fails and you need to re-dispatch — record what went wrong.
+- You discover a task dependency issue (blocked task not unblocked, circular dependency).
+- A reviewer sends back `review_feedback` more than once for the same issue.
+- A subagent reports success but forgot to record a learning for a non-obvious fix.
+
+**Format — append one entry per learning:**
+```
+### [YYYY-MM-DD] agent:ralph | task:{task_id}
+**Problem:** {what went wrong}
+**Root Cause:** {why it happened}
+**Fix:** {what you changed}
+**Lesson:** {reusable takeaway for any agent}
+```
+
+**When to read:** At the START of every execution loop, before dispatching any tasks.
+</learnings>
 
 <output_format>
 When all tasks are done (or after max iterations), return:

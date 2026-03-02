@@ -41,3 +41,6 @@ Thumbs.db
 htmlcov/
 .pytest_cache/
 gen-lang*.json
+project_*.json
+task_list.json
+shared/task_list.json

@@ -99,7 +99,7 @@
     "id": 13,
     "title": "Push feature/preset-questions branch",
     "assigned_to": "github",
-    "status": "not_started",
+    "status": "done",
     "blocked_by": [12],
     "description": "Commit all changes and push to 'feature/preset-questions' branch. Commit message: 'feat: add preset vs dynamic question mode — admin can generate fixed question sets or use dynamic AI generation'. Workspace root: d:\\GitHub\\conversational-survey-engine."
   }

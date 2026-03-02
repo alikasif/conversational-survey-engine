@@ -57,6 +57,10 @@ def _check_output_leakage(question: str) -> bool:
 def get_model(prefix="GEMINI"):
     """Get LitellmModel configured from settings."""
     model = settings.GEMINI_MODEL
+    # For vertex_ai models, don't pass api_key — use service account credentials
+    if model.startswith("vertex_ai/"):
+        logger.info(f"Creating model: {model} (vertex_ai, using service account)")
+        return LitellmModel(model=model)
     api_key = settings.effective_api_key
     logger.info(f"Creating model: {model}, api_key={'set' if api_key else 'MISSING'}")
     return LitellmModel(model=model, api_key=api_key)

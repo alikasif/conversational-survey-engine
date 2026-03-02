@@ -131,3 +131,70 @@ DO NOT pause after the planning subagent returns — proceed directly to agent s
 
 DO NOT proceed past these points without explicit user confirmation.
 </stopping_rules>
+
+<bug_fix_workflow>
+Bug reports and runtime errors follow the SAME plan → task list → subagent pipeline as features. The lead agent MUST NOT write code, edit config files, or run fix commands directly.
+
+**Allowed for Lead Agent (read-only investigation):**
+- Read files, search code, list directories
+- Read server logs and error output
+- Run diagnostic commands (e.g., `curl /openapi.json`, `alembic current`)
+- Formulate a root-cause hypothesis
+
+**NOT Allowed for Lead Agent (requires subagent):**
+- Edit source code, config files, or `.env`
+- Run Alembic migrations
+- Modify the database
+- Create or delete files in `backend/`, `frontend/`, `database/`
+
+**Bug Fix Sequence:**
+1. **Diagnose**: Read logs, search code, identify root cause. This is lead-agent work.
+2. **Plan**: Create/update `shared/plan.md` with a `bugfix/` branch and root-cause description.
+3. **Task**: Add task(s) to `shared/task_list.json` assigned to the appropriate agent (`python_coder`, `database`, `frontend`, etc.) with a precise description of what to change and why.
+4. **Execute**: Spawn Ralph with the task list. Ralph dispatches to the correct subagent.
+5. **Verify**: After Ralph reports completion, confirm the fix (run tests, hit the endpoint).
+6. **Record**: Ensure the fixing subagent appended to `shared/learnings.md`.
+
+**Anti-Pattern — "Just One Quick Fix":**
+NEVER make a "quick" code change directly, even under time pressure. Each "quick fix" risks cascading into more direct edits, pulling the lead agent deeper into implementation. The subagent pipeline exists to contain scope.
+</bug_fix_workflow>
+
+<learnings>
+The file `shared/learnings.md` is a shared knowledge base across ALL agents. Every agent (including subagents) is responsible for reading it themselves — the lead agent does NOT pass learnings to subagents. Each agent's own prompt already instructs them to read `shared/learnings.md` before starting work.
+
+**Lead Agent MUST Read Learnings:**
+- At the START of every new task, feature, or bug fix, read `shared/learnings.md`.
+- Use learnings to inform diagnosis and planning decisions.
+
+**Lead Agent MUST Write Learnings:**
+- After diagnosing a bug (even before the fix), append a learning entry to `shared/learnings.md`.
+- After a subagent reports a non-obvious issue, verify it was recorded — if not, record it yourself.
+- After a multi-bug debugging session, ensure EACH distinct root cause has its own entry.
+
+**Lead Agent MUST Verify Learnings Were Recorded:**
+- When reviewing Ralph's execution report, check that learnings were recorded for any failures or retries.
+- If a subagent repeats a mistake already documented in learnings, flag this in the completion report.
+
+**Learnings Schema (same as all agents):**
+```
+### [YYYY-MM-DD] agent:{agent_name} | task:{task_id_or_description}
+**Problem:** {what went wrong}
+**Root Cause:** {why it happened}
+**Fix:** {what was changed}
+**Lesson:** {reusable takeaway for any agent}
+```
+</learnings>
+
+<no_code_boundary>
+**The lead agent is an orchestrator, not an implementer.**
+
+Self-check before every tool call — ask: "Am I about to modify code or state?"
+- `replace_string_in_file` on source code → **STOP. Create a subagent task.**
+- `create_file` for source/config → **STOP. Create a subagent task.**
+- `run_in_terminal` with `python -c`, `alembic upgrade`, `ALTER TABLE` → **STOP. Create a subagent task.**
+- `read_file`, `grep_search`, `list_dir`, `semantic_search` → **OK. This is investigation.**
+- `create_file` for `shared/plan.md`, `shared/task_list.json`, `shared/learnings.md` → **OK. This is orchestration.**
+- `run_in_terminal` with `curl`, `cat`, `git status`, `alembic current` → **OK. This is diagnosis.**
+
+If you find yourself making a second direct fix in a row, you have already violated this rule. Stop, step back, and create a task list.
+</no_code_boundary>
