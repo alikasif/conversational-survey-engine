@@ -89,6 +89,18 @@ When invoking subagents:
 - Ralph returns a structured execution report. You do NOT need to spawn any specialist, test, reviewer, or github subagent yourself — Ralph handles all of that.
 
 **python-refactorer-subagent** (invoked by Ralph when assigned): Requires a green test baseline before refactoring. Ralph will confirm tests pass before dispatching.
+
+**e2e-tester-subagent** (invoked by Ralph after every code change): Creates a structured scenario file at `shared/e2e_scenarios.json`, executes each scenario against running servers, and writes results back into the file. MUST be included in the selected agents list for ANY task that changes backend, frontend, or database code. This is non-negotiable — no code change ships without an E2E pass.
+
+**Reading E2E Results for Bug-Fix Planning:**
+When the E2E tester reports failures, the Lead Agent MUST:
+1. Read `shared/e2e_scenarios.json` and filter for scenarios where `result` is `FAIL` or `ERROR`.
+2. For each failed scenario, read `failure_summary` and `bug_fix_hint` — these are the E2E tester's best-effort diagnosis.
+3. Create fix tasks in `shared/task_list.json` using the failed scenario data:
+   - Task title: reference the scenario ID (e.g., "Fix S003: POST /api/v1/surveys returns 500")
+   - Task description: include the `failure_summary`, `bug_fix_hint`, and the failing step's `actual` data.
+   - Assign to the appropriate specialist based on the scenario's `phase` (backend_admin/backend_user → `python_coder`, frontend → `frontend`, cross_layer/error_handling → whichever layer failed).
+4. After fixes are applied, re-run the E2E tester to verify all previously-failed scenarios now pass.
 </subagent_instructions>
 
 <cross_layer_coordination>
@@ -106,6 +118,12 @@ For features spanning Database, Backend, and Frontend:
 3.  **Validation**:
     -   Do not mark the backend task as `done` until the API contract exists.
     -   Do not start the frontend task until the API contract is available.
+
+4.  **E2E Gate**:
+    -   After ALL implementation tasks in a feature/bugfix are `done`, an `e2e_tester` task MUST run.
+    -   The E2E tester exercises the full stack (backend API + frontend + database) like a real user.
+    -   If E2E fails with CRITICAL or MAJOR issues, the feature is NOT complete — create fix tasks.
+    -   E2E pass is required before the github-subagent pushes the final commit.
 </cross_layer_coordination>
 
 <agent_selection_guide>
@@ -118,6 +136,7 @@ For features spanning Database, Backend, and Frontend:
 | Docs / README / API docs        | documentation                                      |
 | Refactor Python code            | python-refactorer, backend-reviewer                |
 | Any code task                   | architecture-reviewer (always when ≥2 code agents) |
+| Any code change (be/fe/db)      | e2e-tester (always — runs after every code change) |
 | Any task                        | project-structure (always), github (always)        |
 </agent_selection_guide>
 

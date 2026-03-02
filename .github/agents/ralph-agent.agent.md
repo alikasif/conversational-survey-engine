@@ -66,6 +66,7 @@ For each **ready** task (and each **review_feedback** task), spawn the appropria
 | `architecture_reviewer`        | `architecture-reviewer-subagent`|
 | `database_reviewer`            | `database-reviewer-subagent`    |
 | `github`                       | `github-subagent`               |
+| `e2e_tester`                   | `e2e-tester-subagent`           |
 
 When spawning a subagent, provide:
 - The task ID(s) assigned to it.
@@ -94,8 +95,20 @@ After implementation tasks move to `done`, dispatch the matching reviewer subage
 
 If a reviewer sets a task to `review_feedback`, it will be picked up on the next loop iteration in Step 2.
 
+### Step 4.5 — Dispatch E2E Tester (MANDATORY)
+After ALL implementation and review tasks for a feature/bugfix batch are `done`, dispatch `e2e-tester-subagent`:
+- The E2E tester creates a structured scenario file at `shared/e2e_scenarios.json`, executes each scenario against running servers, writes results back, and returns a summary report.
+- After the E2E tester returns, **read `shared/e2e_scenarios.json`** and check for failures.
+- If the scenario file contains scenarios with `result` = `FAIL` or `ERROR` at severity `CRITICAL` or `MAJOR`:
+  1. For each failed scenario, read its `failure_summary` and `bug_fix_hint`.
+  2. Create new fix tasks in `shared/task_list.json` assigned to the appropriate specialist. Use the scenario ID and failure details in the task description.
+  3. Go back to Step 1 to dispatch the fix tasks.
+  4. After fixes are done, re-run the E2E tester to verify the previously-failed scenarios now pass.
+- If the E2E report is all **PASS** (or only MINOR issues), proceed to Step 5.
+- **No code change may be pushed to remote without an E2E pass.**
+
 ### Step 5 — Dispatch GitHub Subagent
-After any batch of tasks complete (status moves to `done`), invoke `github-subagent` to push unpushed commits to the remote.
+After the E2E tester passes (or only MINOR issues remain), invoke `github-subagent` to push unpushed commits to the remote.
 
 ### Step 6 — Check Completion
 Re-read `shared/task_list.json`:
@@ -121,6 +134,8 @@ Re-read `shared/task_list.json`:
 - You MUST respect `blocked_by` dependencies — never dispatch a task whose blockers are not `done`.
 - You MUST dispatch reviewers AFTER the implementation they review is `done`, not before.
 - You MUST dispatch `github-subagent` periodically to keep the remote in sync.
+- You MUST dispatch `e2e-tester-subagent` after every batch of implementation tasks completes — no code ships without an E2E pass.
+- You MUST NOT push via `github-subagent` if the last E2E run had CRITICAL or MAJOR failures.
 - You MUST exit the loop when all tasks are `done` — do not loop infinitely.
 - You MUST cap review round-trips at 3 per task to prevent infinite feedback loops.
 - You MUST return a structured completion report to the Lead Agent when finished.
