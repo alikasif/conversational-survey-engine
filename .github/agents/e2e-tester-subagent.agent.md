@@ -1,4 +1,3 @@
-```chatagent
 ---
 description: 'Runs the full application end-to-end like a real user: creates a scenario file, executes each scenario, writes results, and reports issues'
 tools: [execute/runInTerminal, execute/getTerminalOutput, execute/awaitTerminal, execute/killTerminal, read/readFile, read/problems, edit/editFiles, edit/createFile, search/fileSearch, search/listDirectory, search/textSearch, search/codebase, search/changes, web/fetch, todo]
@@ -327,4 +326,3 @@ The file `shared/learnings.md` is a shared knowledge base across all agents.
 
 **When to read:** At the START of every test run, before checking server health.
 </learnings>
-```

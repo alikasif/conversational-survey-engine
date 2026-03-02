@@ -48,7 +48,7 @@ Every task in `shared/task_list.json` MUST use this exact structure:
 ```
 **Field rules:**
 - `assigned_to` (NOT `agent`): Must use **underscores**, matching Ralph's dispatch table exactly:
-  `project_structure`, `python_coder`, `java_coder`, `frontend`, `database`, `documentation`, `python_test`, `java_test`, `frontend_test`, `database_test`, `python_refactorer`, `frontend_reviewer`, `backend_reviewer`, `architecture_reviewer`, `database_reviewer`, `github`
+  `project_structure`, `python_coder`, `java_coder`, `frontend`, `database`, `documentation`, `python_test`, `java_test`, `frontend_test`, `database_test`, `python_refactorer`, `frontend_reviewer`, `backend_reviewer`, `architecture_reviewer`, `database_reviewer`, `github`, `devops`
 - `status`: Must use **underscores**: `not_started`, `in_progress`, `done`, `blocked`, `review_feedback`
 - `blocked_by`: Array of task `id` integers that must be `done` before this task can start.
 - Do NOT use hyphens in `assigned_to` or `status` values. Ralph will fail to match them.
@@ -133,6 +133,8 @@ For features spanning Database, Backend, and Frontend:
 | Python / FastAPI / Flask        | python-coder, backend-reviewer, python-test        |
 | Java / Spring Boot              | java-coder, backend-reviewer, java-test            |
 | Database / SQL / schema         | database, database-reviewer, database-test         |
+| Docker / K8s / CI/CD / deploy   | devops, architecture-reviewer                      |
+| DB migration / cloud DB         | devops, database-reviewer                          |
 | Docs / README / API docs        | documentation                                      |
 | Refactor Python code            | python-refactorer, backend-reviewer                |
 | Any code task                   | architecture-reviewer (always when ≥2 code agents) |

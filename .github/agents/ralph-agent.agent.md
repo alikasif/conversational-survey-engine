@@ -28,7 +28,7 @@ The `shared/task_list.json` file uses this exact schema:
 ```
 **Field rules:**
 - The agent identifier field is `assigned_to` (NOT `agent`).
-- `assigned_to` values use **underscores**: `project_structure`, `python_coder`, `frontend`, `database`, etc.
+- `assigned_to` values use **underscores**: `project_structure`, `python_coder`, `frontend`, `database`, `devops`, etc.
 - `status` values use **underscores**: `not_started`, `in_progress`, `done`, `blocked`, `review_feedback`.
 - Match tasks to subagents using the `assigned_to` field in the dispatch table below.
 </task_list_schema>
@@ -67,6 +67,7 @@ For each **ready** task (and each **review_feedback** task), spawn the appropria
 | `database_reviewer`            | `database-reviewer-subagent`    |
 | `github`                       | `github-subagent`               |
 | `e2e_tester`                   | `e2e-tester-subagent`           |
+| `devops`                       | `devops-subagent`               |
 
 When spawning a subagent, provide:
 - The task ID(s) assigned to it.
