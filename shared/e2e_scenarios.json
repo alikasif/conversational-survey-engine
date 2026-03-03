@@ -1,0 +1,293 @@
+{
+  "run_timestamp": "2026-03-02T13:51:45.282939",
+  "base_url": "http://localhost:8000",
+  "summary": {
+    "total": 28,
+    "pass": 28,
+    "fail": 0,
+    "error": 0,
+    "skip": 0
+  },
+  "scenarios": [
+    {
+      "scenario_id": "S001",
+      "name": "Health check",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S002",
+      "name": "Root endpoint",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S003",
+      "name": "Create dynamic survey",
+      "result": "PASS",
+      "details": "id=7963ae59-3219-4637-a434-4e7ff1b82c7d",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S004",
+      "name": "List surveys",
+      "result": "PASS",
+      "details": "count=9",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S005",
+      "name": "Get dynamic survey detail",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S006",
+      "name": "Update dynamic survey",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S007",
+      "name": "Get survey stats",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S008",
+      "name": "Delete dynamic survey",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S009",
+      "name": "Create preset survey",
+      "result": "PASS",
+      "details": "id=5e441348-d8e2-4f60-8365-f948fea8e9be",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S010",
+      "name": "Set preset questions",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S011",
+      "name": "Verify preset questions",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S012",
+      "name": "Generate questions on dynamic survey (expect 400)",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S013",
+      "name": "Start preset session, verify Q1",
+      "result": "PASS",
+      "details": "session_id=796fd97c-ae43-4798-a390-6464173416db",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S014",
+      "name": "Answer Q1, verify Q2 returned",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S015",
+      "name": "Answer Q2 & Q3, session completed",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S016",
+      "name": "Get session detail, verify conversation",
+      "result": "PASS",
+      "details": "conversation_len=3",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S017",
+      "name": "Respond on completed session (expect 409)",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S018",
+      "name": "Start dynamic session",
+      "result": "PASS",
+      "details": "session_id=ae736c09-8ac3-4856-bfce-cf4a52586d03",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S019",
+      "name": "Respond in dynamic session",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S020",
+      "name": "Session on non-existent survey (404)",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S021",
+      "name": "Get non-existent survey (404)",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S022",
+      "name": "Invalid question_mode (422)",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S023",
+      "name": "Empty answer (422 or 409)",
+      "result": "PASS",
+      "details": "status=422",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S024",
+      "name": "Exit session early",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S025",
+      "name": "Respond on exited session (409)",
+      "result": "PASS",
+      "details": "",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S026",
+      "name": "Survey responses exist",
+      "result": "PASS",
+      "details": "responses_count=2",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S027",
+      "name": "Survey stats reflect sessions",
+      "result": "PASS",
+      "details": "total=2, completed=1",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    },
+    {
+      "scenario_id": "S028",
+      "name": "Pagination works",
+      "result": "PASS",
+      "details": "total=10, returned=1",
+      "expected": "",
+      "actual": "",
+      "failure_summary": "",
+      "bug_fix_hint": ""
+    }
+  ]
+}

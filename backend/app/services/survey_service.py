@@ -1,0 +1,145 @@
+"""Survey CRUD service."""
+
+import json
+import uuid
+from datetime import datetime, timezone
+from typing import List, Optional
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.survey import Survey
+from app.repositories import survey_repo
+from app.schemas.survey import CreateSurveyRequest, UpdateSurveyRequest
+
+
+async def create_survey(
+    request: CreateSurveyRequest, db: AsyncSession
+) -> Survey:
+    """Create a new survey."""
+    now = datetime.now(timezone.utc).isoformat()
+    survey = Survey(
+        id=str(uuid.uuid4()),
+        title=request.title,
+        context=request.context,
+        goal=request.goal,
+        constraints=json.dumps(request.constraints),
+        max_questions=request.max_questions,
+        completion_criteria=request.completion_criteria,
+        goal_coverage_threshold=request.goal_coverage_threshold,
+        question_mode=request.question_mode,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    )
+    return await survey_repo.create(db, survey)
+
+
+async def get_survey(survey_id: str, db: AsyncSession) -> Optional[Survey]:
+    """Get a survey by ID."""
+    return await survey_repo.get_by_id(db, survey_id)
+
+
+async def list_surveys(
+    db: AsyncSession, skip: int = 0, limit: int = 20
+) -> tuple[List[Survey], int]:
+    """List all surveys with pagination."""
+    surveys = await survey_repo.list_all(db, skip=skip, limit=limit)
+    total = await survey_repo.count_total(db)
+    return surveys, total
+
+
+async def update_survey(
+    survey_id: str, request: UpdateSurveyRequest, db: AsyncSession
+) -> Optional[Survey]:
+    """Update an existing survey."""
+    survey = await survey_repo.get_by_id(db, survey_id)
+    if not survey:
+        return None
+
+    update_data = request.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        if field == "constraints" and value is not None:
+            setattr(survey, field, json.dumps(value))
+        else:
+            setattr(survey, field, value)
+
+    survey.updated_at = datetime.now(timezone.utc).isoformat()
+    return await survey_repo.update(db, survey)
+
+
+async def delete_survey(
+    survey_id: str, db: AsyncSession
+) -> Optional[Survey]:
+    """Soft delete a survey."""
+    survey = await survey_repo.get_by_id(db, survey_id)
+    if not survey:
+        return None
+    return await survey_repo.soft_delete(db, survey)
+
+
+async def get_survey_stats(survey_id: str, db: AsyncSession) -> Optional[dict]:
+    """Get survey statistics."""
+    survey = await survey_repo.get_by_id(db, survey_id)
+    if not survey:
+        return None
+    return await survey_repo.get_stats(db, survey_id)
+
+
+async def generate_preset_questions(
+    survey_id: str, db: AsyncSession
+) -> list[dict]:
+    """Generate preset questions for a survey.
+
+    Args:
+        survey_id: The survey ID.
+        db: Database session.
+
+    Returns:
+        List of generated question dicts.
+
+    Raises:
+        ValueError: If survey not found or not in preset mode.
+    """
+    from app.agents.generator_agent import generate_preset_question_set
+
+    survey = await survey_repo.get_by_id(db, survey_id)
+    if not survey:
+        raise ValueError("Survey not found")
+
+    if survey.question_mode != "preset":
+        raise ValueError("Survey is not in preset mode")
+
+    questions = await generate_preset_question_set(survey, survey.max_questions)
+
+    survey.preset_questions = json.dumps(questions)
+    survey.preset_generated_at = datetime.now(timezone.utc).isoformat()
+    survey.updated_at = datetime.now(timezone.utc).isoformat()
+    await survey_repo.update(db, survey)
+
+    return questions
+
+
+async def update_preset_questions(
+    survey_id: str, questions: list[dict], db: AsyncSession
+) -> None:
+    """Manually set or update preset questions for a survey.
+
+    Args:
+        survey_id: The survey ID.
+        questions: List of question dicts.
+        db: Database session.
+
+    Raises:
+        ValueError: If survey not found or not in preset mode.
+    """
+    survey = await survey_repo.get_by_id(db, survey_id)
+    if not survey:
+        raise ValueError("Survey not found")
+
+    if survey.question_mode != "preset":
+        raise ValueError("Survey is not in preset mode")
+
+    survey.preset_questions = json.dumps(questions)
+    survey.preset_generated_at = datetime.now(timezone.utc).isoformat()
+    survey.updated_at = datetime.now(timezone.utc).isoformat()
+    await survey_repo.update(db, survey)

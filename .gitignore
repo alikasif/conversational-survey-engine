@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.venv/
+*.egg
+
+# Node
+node_modules/
+frontend/dist/
+
+# Database
+data/*.db
+data/*.db-wal
+data/*.db-shm
+backend/data/*.db
+backend/data/*.db-wal
+backend/data/*.db-shm
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+gen-lang*.json
+project_*.json
+task_list.json
+shared/task_list.json

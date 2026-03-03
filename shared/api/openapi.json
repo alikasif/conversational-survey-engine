@@ -1,0 +1,1385 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Conversational Survey Engine",
+    "description": "AI-powered adaptive survey platform",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/surveys": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Survey",
+        "description": "Create a new survey.",
+        "operationId": "create_survey_api_v1_admin_surveys_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSurveyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Surveys",
+        "description": "List all surveys with pagination.",
+        "operationId": "list_surveys_api_v1_admin_surveys_get",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/surveys/{survey_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Survey",
+        "description": "Get a survey by ID with session stats.",
+        "operationId": "get_survey_api_v1_admin_surveys__survey_id__get",
+        "parameters": [
+          {
+            "name": "survey_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Survey Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Survey",
+        "description": "Update an existing survey.",
+        "operationId": "update_survey_api_v1_admin_surveys__survey_id__put",
+        "parameters": [
+          {
+            "name": "survey_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Survey Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSurveyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete Survey",
+        "description": "Delete (soft) a survey.",
+        "operationId": "delete_survey_api_v1_admin_surveys__survey_id__delete",
+        "parameters": [
+          {
+            "name": "survey_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Survey Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/surveys/{survey_id}/responses": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Survey Responses",
+        "description": "Get all responses for a survey.",
+        "operationId": "get_survey_responses_api_v1_admin_surveys__survey_id__responses_get",
+        "parameters": [
+          {
+            "name": "survey_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Survey Id"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/surveys/{survey_id}/stats": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Survey Stats",
+        "description": "Get statistics for a survey.",
+        "operationId": "get_survey_stats_api_v1_admin_surveys__survey_id__stats_get",
+        "parameters": [
+          {
+            "name": "survey_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Survey Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyStatsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/surveys/{survey_id}/sessions": {
+      "post": {
+        "tags": [
+          "participant"
+        ],
+        "summary": "Create Session",
+        "description": "Start a new survey session and get the first question.",
+        "operationId": "create_session_api_v1_surveys__survey_id__sessions_post",
+        "parameters": [
+          {
+            "name": "survey_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Survey Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequest",
+                "default": {
+                  "metadata": {}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/surveys/{survey_id}/sessions/{session_id}/respond": {
+      "post": {
+        "tags": [
+          "participant"
+        ],
+        "summary": "Submit Answer",
+        "description": "Submit an answer and get the next question or completion.",
+        "operationId": "submit_answer_api_v1_surveys__survey_id__sessions__session_id__respond_post",
+        "parameters": [
+          {
+            "name": "survey_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Survey Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitAnswerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NextQuestionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/surveys/{survey_id}/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "participant"
+        ],
+        "summary": "Get Session",
+        "description": "Get the current state of a session.",
+        "operationId": "get_session_api_v1_surveys__survey_id__sessions__session_id__get",
+        "parameters": [
+          {
+            "name": "survey_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Survey Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/surveys/{survey_id}/sessions/{session_id}/exit": {
+      "post": {
+        "tags": [
+          "participant"
+        ],
+        "summary": "Exit Session",
+        "description": "Exit a session early.",
+        "operationId": "exit_session_api_v1_surveys__survey_id__sessions__session_id__exit_post",
+        "parameters": [
+          {
+            "name": "survey_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Survey Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionCompleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConversationEntry": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "title": "Question Id"
+          },
+          "question_text": {
+            "type": "string",
+            "title": "Question Text"
+          },
+          "answer_text": {
+            "type": "string",
+            "title": "Answer Text"
+          },
+          "question_number": {
+            "type": "integer",
+            "title": "Question Number"
+          },
+          "answered_at": {
+            "type": "string",
+            "title": "Answered At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "question_text",
+          "answer_text",
+          "question_number",
+          "answered_at"
+        ],
+        "title": "ConversationEntry",
+        "description": "A single Q&A entry in the conversation."
+      },
+      "CreateSessionRequest": {
+        "properties": {
+          "participant_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participant Name"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "title": "CreateSessionRequest",
+        "description": "Request schema for creating a session."
+      },
+      "CreateSurveyRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "context": {
+            "type": "string",
+            "title": "Context"
+          },
+          "goal": {
+            "type": "string",
+            "title": "Goal"
+          },
+          "constraints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Constraints"
+          },
+          "max_questions": {
+            "type": "integer",
+            "title": "Max Questions",
+            "default": 10
+          },
+          "completion_criteria": {
+            "type": "string",
+            "title": "Completion Criteria",
+            "default": ""
+          },
+          "goal_coverage_threshold": {
+            "type": "number",
+            "title": "Goal Coverage Threshold",
+            "default": 0.85
+          },
+          "context_similarity_threshold": {
+            "type": "number",
+            "title": "Context Similarity Threshold",
+            "default": 0.7
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "context",
+          "goal"
+        ],
+        "title": "CreateSurveyRequest",
+        "description": "Request schema for creating a survey."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "NextQuestionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuestionPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completion_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Reason"
+          },
+          "question_number": {
+            "type": "integer",
+            "title": "Question Number"
+          },
+          "max_questions": {
+            "type": "integer",
+            "title": "Max Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "status",
+          "question_number",
+          "max_questions"
+        ],
+        "title": "NextQuestionResponse",
+        "description": "Response schema for the next question or completion."
+      },
+      "QuestionPayload": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "title": "Question Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "question_number": {
+            "type": "integer",
+            "title": "Question Number"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "text",
+          "question_number"
+        ],
+        "title": "QuestionPayload",
+        "description": "Question data payload."
+      },
+      "ResponseListResponse": {
+        "properties": {
+          "responses": {
+            "items": {
+              "$ref": "#/components/schemas/SessionDetailResponse"
+            },
+            "type": "array",
+            "title": "Responses"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "skip": {
+            "type": "integer",
+            "title": "Skip"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "responses",
+          "total",
+          "skip",
+          "limit"
+        ],
+        "title": "ResponseListResponse",
+        "description": "Response schema for listing session responses."
+      },
+      "SessionCompleteResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "question_count": {
+            "type": "integer",
+            "title": "Question Count"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "status",
+          "question_count",
+          "message"
+        ],
+        "title": "SessionCompleteResponse",
+        "description": "Response schema for exiting a session."
+      },
+      "SessionDetailResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "survey_id": {
+            "type": "string",
+            "title": "Survey Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "conversation": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationEntry"
+            },
+            "type": "array",
+            "title": "Conversation"
+          },
+          "question_count": {
+            "type": "integer",
+            "title": "Question Count"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "user_id",
+          "survey_id",
+          "status",
+          "conversation",
+          "question_count",
+          "created_at"
+        ],
+        "title": "SessionDetailResponse",
+        "description": "Detailed session response with conversation history."
+      },
+      "SessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "survey_id": {
+            "type": "string",
+            "title": "Survey Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "current_question": {
+            "$ref": "#/components/schemas/QuestionPayload"
+          },
+          "question_number": {
+            "type": "integer",
+            "title": "Question Number"
+          },
+          "max_questions": {
+            "type": "integer",
+            "title": "Max Questions"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "user_id",
+          "survey_id",
+          "status",
+          "current_question",
+          "question_number",
+          "max_questions",
+          "created_at"
+        ],
+        "title": "SessionResponse",
+        "description": "Response schema after creating a session."
+      },
+      "SubmitAnswerRequest": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "question_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question Id"
+          },
+          "question_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer"
+        ],
+        "title": "SubmitAnswerRequest",
+        "description": "Request schema for submitting an answer."
+      },
+      "SurveyDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "context": {
+            "type": "string",
+            "title": "Context"
+          },
+          "goal": {
+            "type": "string",
+            "title": "Goal"
+          },
+          "constraints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Constraints"
+          },
+          "max_questions": {
+            "type": "integer",
+            "title": "Max Questions"
+          },
+          "completion_criteria": {
+            "type": "string",
+            "title": "Completion Criteria"
+          },
+          "goal_coverage_threshold": {
+            "type": "number",
+            "title": "Goal Coverage Threshold"
+          },
+          "context_similarity_threshold": {
+            "type": "number",
+            "title": "Context Similarity Threshold"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "total_sessions": {
+            "type": "integer",
+            "title": "Total Sessions",
+            "default": 0
+          },
+          "completed_sessions": {
+            "type": "integer",
+            "title": "Completed Sessions",
+            "default": 0
+          },
+          "avg_questions_per_session": {
+            "type": "number",
+            "title": "Avg Questions Per Session",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "context",
+          "goal",
+          "constraints",
+          "max_questions",
+          "completion_criteria",
+          "goal_coverage_threshold",
+          "context_similarity_threshold",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SurveyDetailResponse",
+        "description": "Response schema for survey detail with stats."
+      },
+      "SurveyListResponse": {
+        "properties": {
+          "surveys": {
+            "items": {
+              "$ref": "#/components/schemas/SurveyResponse"
+            },
+            "type": "array",
+            "title": "Surveys"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "skip": {
+            "type": "integer",
+            "title": "Skip"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "surveys",
+          "total",
+          "skip",
+          "limit"
+        ],
+        "title": "SurveyListResponse",
+        "description": "Response schema for listing surveys."
+      },
+      "SurveyResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "context": {
+            "type": "string",
+            "title": "Context"
+          },
+          "goal": {
+            "type": "string",
+            "title": "Goal"
+          },
+          "constraints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Constraints"
+          },
+          "max_questions": {
+            "type": "integer",
+            "title": "Max Questions"
+          },
+          "completion_criteria": {
+            "type": "string",
+            "title": "Completion Criteria"
+          },
+          "goal_coverage_threshold": {
+            "type": "number",
+            "title": "Goal Coverage Threshold"
+          },
+          "context_similarity_threshold": {
+            "type": "number",
+            "title": "Context Similarity Threshold"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "context",
+          "goal",
+          "constraints",
+          "max_questions",
+          "completion_criteria",
+          "goal_coverage_threshold",
+          "context_similarity_threshold",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SurveyResponse",
+        "description": "Response schema for a survey."
+      },
+      "SurveyStatsResponse": {
+        "properties": {
+          "survey_id": {
+            "type": "string",
+            "title": "Survey Id"
+          },
+          "total_sessions": {
+            "type": "integer",
+            "title": "Total Sessions"
+          },
+          "completed_sessions": {
+            "type": "integer",
+            "title": "Completed Sessions"
+          },
+          "abandoned_sessions": {
+            "type": "integer",
+            "title": "Abandoned Sessions"
+          },
+          "avg_questions_per_session": {
+            "type": "number",
+            "title": "Avg Questions Per Session"
+          },
+          "avg_completion_time_seconds": {
+            "type": "number",
+            "title": "Avg Completion Time Seconds"
+          },
+          "top_themes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Top Themes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "survey_id",
+          "total_sessions",
+          "completed_sessions",
+          "abandoned_sessions",
+          "avg_questions_per_session",
+          "avg_completion_time_seconds",
+          "top_themes"
+        ],
+        "title": "SurveyStatsResponse",
+        "description": "Response schema for survey statistics."
+      },
+      "UpdateSurveyRequest": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          },
+          "goal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal"
+          },
+          "constraints": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Constraints"
+          },
+          "max_questions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Questions"
+          },
+          "completion_criteria": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Criteria"
+          },
+          "goal_coverage_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Coverage Threshold"
+          },
+          "context_similarity_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Similarity Threshold"
+          }
+        },
+        "type": "object",
+        "title": "UpdateSurveyRequest",
+        "description": "Request schema for updating a survey."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
