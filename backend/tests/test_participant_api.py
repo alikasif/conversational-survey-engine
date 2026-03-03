@@ -15,9 +15,9 @@ def _agent_patches(question_text: str = MOCK_QUESTION_2, coverage: float = 0.1):
     """Return a context-manager stack that mocks all LLM-dependent code."""
     return (
         patch(
-            "app.services.question_service.generate_question",
+            "app.services.question_service.llm_client.generate_question",
             new_callable=AsyncMock,
-            return_value=question_text,
+            return_value={"question_text": question_text, "question_id": "mock-q-id"},
         ),
         patch(
             "app.services.question_service.validator.estimate_goal_coverage",

@@ -22,7 +22,8 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: initialize DB on startup."""
-    os.makedirs("data", exist_ok=True)
+    if "sqlite" in settings.DATABASE_URL:
+        os.makedirs("data", exist_ok=True)
     await init_db()
     yield
 

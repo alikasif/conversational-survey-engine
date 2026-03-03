@@ -8,7 +8,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.generator_agent import generate_question
+from app.clients.llm_client import llm_client
 from app.agents.answer_guardrails import check_answer, flags_to_json
 from app.agents.validator import QuestionValidator
 from app.models.response import Response
@@ -74,16 +74,23 @@ async def generate_next_question(
             )
             return None
 
-    # Generate question
+    # Generate question via LLM service
     question_number = session.question_count + 1
-    question_text = await generate_question(
-        survey=survey,
-        conversation_history=conversation_history,
+    result = await llm_client.generate_question(
+        survey_context=survey.context,
+        goal=survey.goal,
+        constraints=survey.constraints,
+        conversation_history=[
+            [q, a] for q, a in conversation_history
+        ],
         question_number=question_number,
+        max_questions=survey.max_questions,
+        goal_coverage_threshold=survey.goal_coverage_threshold,
         rejection_guardrail_hint=rejection_guardrail_hint,
     )
 
-    question_id = str(uuid.uuid4())
+    question_text = result["question_text"]
+    question_id = result["question_id"]
 
     # Update session question count
     await session_repo.update_question_count(db, session, question_number)

@@ -8,6 +8,7 @@
     "backend/app/",
     "backend/app/agents/",
     "backend/app/api/",
+    "backend/app/clients/",
     "backend/app/core/",
     "backend/app/models/",
     "backend/app/repositories/",
@@ -28,7 +29,11 @@
     "shared/",
     "shared/api/",
     "tests/",
-    "tests/e2e/"
+    "tests/e2e/",
+    "k8s/",
+    "llm-service/",
+    "llm-service/app/",
+    "llm-service/app/agents/"
   ],
   "files": [
     ".env.example",
@@ -46,6 +51,7 @@
     "backend/app/agents/generator_agent.py",
     "backend/app/agents/prompts.py",
     "backend/app/agents/validator.py",
+    "backend/app/clients/__init__.py",
     "backend/app/api/__init__.py",
     "backend/app/api/admin.py",
     "backend/app/api/health.py",
@@ -126,6 +132,9 @@
     "shared/plan.md",
     "shared/project_structure.json",
     "shared/task_list.json",
-    "tests/e2e/test_full_flow.py"
+    "tests/e2e/test_full_flow.py",
+    "k8s/.gitkeep",
+    "llm-service/app/__init__.py",
+    "llm-service/app/agents/__init__.py"
   ]
 }

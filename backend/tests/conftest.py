@@ -93,10 +93,11 @@ async def create_test_session(
     client: AsyncClient, survey_id: str, *, mock_question: str = "How do you feel about remote work?"
 ) -> dict:
     """Helper: create a session (mocking the LLM) and return the response JSON."""
+    mock_llm_response = {"question_text": mock_question, "question_id": "mock-q-id"}
     with patch(
-        "app.services.question_service.generate_question",
+        "app.services.question_service.llm_client.generate_question",
         new_callable=AsyncMock,
-        return_value=mock_question,
+        return_value=mock_llm_response,
     ), patch(
         "app.services.question_service.validator.estimate_goal_coverage",
         new_callable=AsyncMock,

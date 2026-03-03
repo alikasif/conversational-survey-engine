@@ -119,7 +119,7 @@ async def test_generate_preset_questions_endpoint(client):
     mock_questions = SAMPLE_PRESET_QUESTIONS
 
     with patch(
-        "app.agents.generator_agent.generate_preset_question_set",
+        "app.clients.llm_client.llm_client.generate_preset_questions",
         new_callable=AsyncMock,
         return_value=mock_questions,
     ):
@@ -206,7 +206,7 @@ async def test_preset_mode_skips_coverage(client):
         "app.services.question_service.validator.estimate_goal_coverage",
         new_callable=AsyncMock,
     ) as mock_coverage, patch(
-        "app.services.question_service.generate_question",
+        "app.services.question_service.llm_client.generate_question",
         new_callable=AsyncMock,
     ) as mock_gen:
         resp = await _create_preset_session(client, survey_id)

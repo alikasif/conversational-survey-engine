@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cse-config
+  namespace: cse
+  labels:
+    app.kubernetes.io/part-of: cse
+data:
+  CORS_ORIGINS: '["*"]'
+  LOG_LEVEL: "info"
+  LLM_SERVICE_URL: "http://llm-service.cse.svc.cluster.local:8001"

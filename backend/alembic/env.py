@@ -1,6 +1,7 @@
-"""Alembic env.py — async migration support for SQLite + aiosqlite."""
+"""Alembic env.py — async migration support for SQLite + aiosqlite and PostgreSQL + asyncpg."""
 
 import asyncio
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -11,7 +12,6 @@ from alembic import context
 
 # Import all models so Alembic can detect them
 import sys
-import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -21,7 +21,15 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# Override sqlalchemy.url from DATABASE_URL env var if set
+_db_url = os.environ.get("DATABASE_URL", None)
+if _db_url:
+    config.set_main_option("sqlalchemy.url", _db_url)
+
 target_metadata = Base.metadata
+
+# Use batch mode only for SQLite (required for ALTER TABLE limitations)
+_use_batch = "sqlite" in (config.get_main_option("sqlalchemy.url") or "")
 
 
 def run_migrations_offline() -> None:
@@ -32,7 +40,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,
+        render_as_batch=_use_batch,
     )
 
     with context.begin_transaction():
@@ -44,7 +52,7 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        render_as_batch=True,
+        render_as_batch=_use_batch,
     )
 
     with context.begin_transaction():

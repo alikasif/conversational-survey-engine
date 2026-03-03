@@ -120,10 +120,11 @@ async def test_session_service_create(db_session: AsyncSession):
     await db_session.commit()
 
     mock_question = "What is your experience with remote work?"
+    mock_llm_response = {"question_text": mock_question, "question_id": "mock-q-id"}
     with patch(
-        "app.services.question_service.generate_question",
+        "app.services.question_service.llm_client.generate_question",
         new_callable=AsyncMock,
-        return_value=mock_question,
+        return_value=mock_llm_response,
     ), patch(
         "app.services.question_service.validator.estimate_goal_coverage",
         new_callable=AsyncMock,
@@ -162,9 +163,9 @@ async def test_session_service_exit(db_session: AsyncSession):
     await db_session.commit()
 
     with patch(
-        "app.services.question_service.generate_question",
+        "app.services.question_service.llm_client.generate_question",
         new_callable=AsyncMock,
-        return_value="First question?",
+        return_value={"question_text": "First question?", "question_id": "mock-q-id"},
     ), patch(
         "app.services.question_service.validator.estimate_goal_coverage",
         new_callable=AsyncMock,
@@ -234,9 +235,9 @@ async def test_question_service_generate_next_question(db_session: AsyncSession)
     survey, session = await _setup_active_session(db_session)
 
     with patch(
-        "app.services.question_service.generate_question",
+        "app.services.question_service.llm_client.generate_question",
         new_callable=AsyncMock,
-        return_value="What motivates you at work?",
+        return_value={"question_text": "What motivates you at work?", "question_id": "mock-q-id"},
     ), patch(
         "app.services.question_service.validator.estimate_goal_coverage",
         new_callable=AsyncMock,
@@ -257,7 +258,7 @@ async def test_question_service_returns_none_at_max(db_session: AsyncSession):
     session.question_count = survey.max_questions  # at limit
 
     with patch(
-        "app.services.question_service.generate_question",
+        "app.services.question_service.llm_client.generate_question",
         new_callable=AsyncMock,
     ) as mock_gen:
         payload = await question_service.generate_next_question(session, survey, db_session)
@@ -272,9 +273,9 @@ async def test_question_service_process_answer(db_session: AsyncSession):
     survey, session = await _setup_active_session(db_session)
 
     with patch(
-        "app.services.question_service.generate_question",
+        "app.services.question_service.llm_client.generate_question",
         new_callable=AsyncMock,
-        return_value="Follow-up question?",
+        return_value={"question_text": "Follow-up question?", "question_id": "mock-q-id"},
     ), patch(
         "app.services.question_service.validator.estimate_goal_coverage",
         new_callable=AsyncMock,

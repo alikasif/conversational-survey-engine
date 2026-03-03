@@ -100,7 +100,7 @@ async def generate_preset_questions(
     Raises:
         ValueError: If survey not found or not in preset mode.
     """
-    from app.agents.generator_agent import generate_preset_question_set
+    from app.clients.llm_client import llm_client
 
     survey = await survey_repo.get_by_id(db, survey_id)
     if not survey:
@@ -109,7 +109,12 @@ async def generate_preset_questions(
     if survey.question_mode != "preset":
         raise ValueError("Survey is not in preset mode")
 
-    questions = await generate_preset_question_set(survey, survey.max_questions)
+    questions = await llm_client.generate_preset_questions(
+        survey_context=survey.context,
+        goal=survey.goal,
+        constraints=survey.constraints,
+        count=survey.max_questions,
+    )
 
     survey.preset_questions = json.dumps(questions)
     survey.preset_generated_at = datetime.now(timezone.utc).isoformat()

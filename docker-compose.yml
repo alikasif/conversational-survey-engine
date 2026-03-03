@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///./data/cse.db}
+      - LLM_SERVICE_URL=http://llm-service:8001
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost","http://localhost:80"]}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+    depends_on:
+      llm-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  llm-service:
+    build: ./llm-service
+    ports:
+      - "8001:8001"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-vertex_ai/gemini-2.0-flash}
+      - GEMINI_VALIDATOR_MODEL=${GEMINI_VALIDATOR_MODEL:-gemini/gemini-2.0-flash}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account.json
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - ${GOOGLE_CREDENTIALS_FILE:-./gen-lang-client-0575690477-7f0434f5aa44.json}:/app/credentials/service-account.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

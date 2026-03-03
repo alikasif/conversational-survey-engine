@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: alembic-migrate
+  namespace: cse
+  labels:
+    app.kubernetes.io/name: alembic-migrate
+    app.kubernetes.io/part-of: cse
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alembic-migrate
+        app.kubernetes.io/part-of: cse
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: alembic-migrate
+          image: cse-backend:latest
+          command: ["python", "-m", "alembic", "upgrade", "head"]
+          envFrom:
+            - secretRef:
+                name: cse-secrets
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
